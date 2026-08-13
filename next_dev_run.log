@@ -1,0 +1,17 @@
+
+> next-template-rtl@0.1.0 dev /app
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+✓ Ready in 1153ms
+○ Compiling / ...
+ GET / 200 in 4.8s (compile: 4.2s, render: 662ms)
+ GET / 200 in 200ms (compile: 15ms, render: 186ms)
+ GET /about 200 in 1124ms (compile: 790ms, render: 334ms)
+ GET /genealogy 200 in 720ms (compile: 500ms, render: 220ms)
+ GET /database 200 in 743ms (compile: 515ms, render: 228ms)
+ GET /profile 200 in 581ms (compile: 445ms, render: 135ms)
