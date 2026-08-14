@@ -3,12 +3,15 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { peopleDatabase, Person } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { Search, ChevronLeft, MapPin, UserCheck, PhoneCall, HelpCircle } from "lucide-react";
 
 export default function Specialized() {
+  const { people } = useSiteStore();
   const [activeTab, setActiveTab] = useState<"all" | "scholar" | "academic" | "doctor" | "engineer" | "lawyer" | "businessman" | "martyr" | "youth" | "student" | "woman">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const activePeople = people && people.length > 0 ? people : [];
 
   const tabsList = [
     { value: "all", label: "الجميع" },
@@ -25,7 +28,7 @@ export default function Specialized() {
   ];
 
   // Filtering Logic
-  const filteredProfessionals = peopleDatabase.filter((p) => {
+  const filteredProfessionals = activePeople.filter((p) => {
     const matchesTab = activeTab === "all" || p.profession === activeTab;
     const matchesSearch = p.name.includes(searchQuery) || (p.title && p.title.includes(searchQuery)) || p.state.includes(searchQuery);
     return matchesTab && matchesSearch;

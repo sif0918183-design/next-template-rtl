@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { servicesDatabase } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { ShieldCheck, Heart, AlertCircle, Sparkles, Receipt, CheckCircle } from "lucide-react";
 
 export default function Services() {
-  const [selectedService, setSelectedService] = useState<typeof servicesDatabase[0] | null>(null);
+  const { services } = useSiteStore();
+  const [selectedService, setSelectedService] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -17,7 +18,9 @@ export default function Services() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleApply = (service: typeof servicesDatabase[0]) => {
+  const activeServices = services && services.length > 0 ? services : [];
+
+  const handleApply = (service: any) => {
     setSelectedService(service);
     setIsSubmitted(false);
     setFormData({
@@ -55,7 +58,7 @@ export default function Services() {
 
         {/* Services List Matrix */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {servicesDatabase.map((service) => (
+          {activeServices.map((service) => (
             <div
               key={service.id}
               className="bg-card border border-border p-6 rounded-2xl shadow-xs text-right space-y-4 hover:border-primary/50 transition-colors flex flex-col justify-between"
