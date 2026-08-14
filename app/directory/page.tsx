@@ -3,13 +3,16 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { geographicStats, StateStats } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { Search, MapPin, Building, Users2, ChevronRight, HelpCircle } from "lucide-react";
 
 export default function Directory() {
+  const { geoStats } = useSiteStore();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredStats = geographicStats.filter(stat =>
+  const activeGeoStats = geoStats && geoStats.length > 0 ? geoStats : [];
+
+  const filteredStats = activeGeoStats.filter(stat =>
     stat.state.includes(searchQuery)
   );
 
@@ -94,7 +97,7 @@ export default function Directory() {
         <div className="p-4 bg-muted/40 border border-border rounded-2xl flex flex-col sm:flex-row items-center gap-4 text-xs font-semibold text-muted-foreground">
           <HelpCircle className="w-6 h-6 text-primary shrink-0" />
           <p className="leading-relaxed text-right">
-            يتم تحديث هذه المصفوفة الجغرافية تلقائياً كل 24 ساعة استناداً لطلبات العضوية الجديدة والتقارير المرفوعة من ممثلي لجان الولايات. يتم حجب بيانات الاتصال الدقيقة للعامة لأسباب تتعلق بالخصوصية والأمان الوطني.
+            يتم تحديث هذه مصفوفة البيانات تلقائياً استناداً لطلبات العضوية الجديدة والتقارير المرفوعة من ممثلي لجان الولايات.
           </p>
         </div>
 

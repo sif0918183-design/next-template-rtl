@@ -3,33 +3,40 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { peopleDatabase, Person } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { Search, GitFork, ArrowLeft, ArrowRight, UserCheck, HelpCircle } from "lucide-react";
 
 export default function Genealogy() {
+  const { people, isLoaded } = useSiteStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(peopleDatabase[0]); // Default to first ancestor
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
+
+  // Fallback if state hasn't fully hydrated yet
+  const activePeopleList = people && people.length > 0 ? people : [];
+
+  // Find current selected person based on state id
+  const selectedPerson = activePeopleList.find(p => p.id === localSelectedId) || activePeopleList[0] || null;
 
   // Filter people matching query for manual lookup
   const filteredPeople = searchQuery.trim()
-    ? peopleDatabase.filter(p => p.name.includes(searchQuery))
+    ? activePeopleList.filter(p => p.name.includes(searchQuery))
     : [];
 
   // Find relatives of the currently selected person in our custom database
   const father = selectedPerson?.fatherId
-    ? peopleDatabase.find(p => p.id === selectedPerson.fatherId)
+    ? activePeopleList.find(p => p.id === selectedPerson.fatherId)
     : null;
 
   const children = selectedPerson
-    ? peopleDatabase.filter(p => p.fatherId === selectedPerson.id)
+    ? activePeopleList.filter(p => p.fatherId === selectedPerson.id)
     : [];
 
   // Tracing back the full lineage line to Ghulamallah
-  const getFullLineage = (person: Person): string[] => {
+  const getFullLineage = (person: any): string[] => {
     const lineage: string[] = [person.name];
     let current = person;
     while (current.fatherId) {
-      const dad = peopleDatabase.find(p => p.id === current.fatherId);
+      const dad = activePeopleList.find(p => p.id === current.fatherId);
       if (dad) {
         lineage.push(dad.name);
         current = dad;
@@ -87,7 +94,7 @@ export default function Genealogy() {
                   filteredPeople.map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => { setSelectedPerson(p); setSearchQuery(""); }}
+                      onClick={() => { setLocalSelectedId(p.id); setSearchQuery(""); }}
                       className="w-full text-right p-2.5 rounded-lg border border-border hover:bg-muted/50 text-xs font-bold block transition-colors"
                     >
                       {p.name}
@@ -102,10 +109,10 @@ export default function Genealogy() {
               <div className="space-y-2">
                 <p className="text-[10px] text-muted-foreground font-semibold">روابط تاريخية سريعة</p>
                 <div className="space-y-1.5">
-                  {peopleDatabase.slice(0, 4).map((p) => (
+                  {activePeopleList.slice(0, 6).map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => setSelectedPerson(p)}
+                      onClick={() => setLocalSelectedId(p.id)}
                       className={`w-full text-right p-2.5 rounded-lg text-xs font-bold block transition-colors ${
                         selectedPerson?.id === p.id
                           ? "bg-primary text-primary-foreground"
@@ -131,7 +138,7 @@ export default function Genealogy() {
           </div>
         </div>
 
-        {/* Left Pane: Interactive Family Tree Navigator (cols-span-8) */}
+        {/* Left Pane: Family Tree Navigator (cols-span-8) */}
         <div className="lg:col-span-8 space-y-6">
           {selectedPerson ? (
             <div className="bg-card border border-border p-6 rounded-2xl shadow-xs space-y-8 relative">
@@ -149,7 +156,7 @@ export default function Genealogy() {
                 {father ? (
                   <div className="flex flex-col items-center">
                     <button
-                      onClick={() => setSelectedPerson(father)}
+                      onClick={() => setLocalSelectedId(father.id)}
                       className="bg-muted hover:bg-muted/80 border border-border px-5 py-2.5 rounded-lg text-xs font-bold text-muted-foreground shadow-xs transition-transform hover:-translate-y-0.5 text-center"
                     >
                       <span className="text-[9px] block text-amber-600 dark:text-amber-400 font-semibold mb-0.5">الوالد</span>
@@ -160,7 +167,7 @@ export default function Genealogy() {
                 ) : (
                   <div className="flex flex-col items-center">
                     <div className="bg-muted/40 border border-border/60 border-dashed px-5 py-2 rounded-lg text-[10px] text-muted-foreground font-semibold">
-                      الجد الأكبر (غلام الله بن عايد)
+                      الجد الأكبر (غلاف الله بن عايد أو بداية الفرع)
                     </div>
                     <div className="w-0.5 h-6 bg-border" />
                   </div>
@@ -184,7 +191,7 @@ export default function Genealogy() {
                   </div>
                 </div>
 
-                {/* 3. Children Nodes (with fork-style branch connectors) */}
+                {/* 3. Children Nodes (with fork-style connector) */}
                 {children.length > 0 && (
                   <div className="flex flex-col items-center w-full">
                     <div className="w-0.5 h-6 bg-border" />
@@ -198,7 +205,7 @@ export default function Genealogy() {
                       {children.map((child) => (
                         <button
                           key={child.id}
-                          onClick={() => setSelectedPerson(child)}
+                          onClick={() => setLocalSelectedId(child.id)}
                           className="bg-card hover:bg-muted/40 border border-border hover:border-primary/50 px-4 py-2 rounded-lg text-xs font-bold text-foreground transition-all duration-150 shadow-xs"
                         >
                           <span className="text-[8px] block text-emerald-600 dark:text-emerald-400 font-semibold mb-0.5">الابن</span>

@@ -5,12 +5,8 @@ import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { SplashScreen } from "@/components/splash-screen";
-import {
-  globalStatistics,
-  newsDatabase,
-  eventsDatabase,
-  servicesDatabase,
-} from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
+import { globalStatistics } from "@/lib/mock-data";
 import {
   Users2,
   MapPin,
@@ -26,6 +22,14 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  const { siteTexts, news, events, services, people, isLoaded } = useSiteStore();
+
+  // Dynamically calculate some stats if database is updated
+  const totalRegistered = Math.max(
+    globalStatistics.totalRegisteredMembers,
+    people.filter(p => p.isRegistered).length
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Splash/Welcome Screen */}
@@ -43,20 +47,15 @@ export default function Home() {
           {/* Right column: Intro Text */}
           <div className="lg:col-span-7 space-y-6">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-emerald-950 border border-amber-300">
-              بوابة النسب والعلم والتكافل
+              {siteTexts.heroBadge}
             </span>
             <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight md:leading-normal">
-              منصة{" "}
               <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
-                السادة الركابية
-              </span>{" "}
-              الرقمية الموحدة في السودان
+                {siteTexts.heroTitle}
+              </span>
             </h1>
             <p className="text-sm md:text-base leading-relaxed text-emerald-100/95 font-medium max-w-xl">
-              أهلاً بكم في المنصة والديوان الرقمي الرسمي الجامع لأبناء السادة
-              الركابية في جمهورية السودان وخارجها. نافذة تواصلية ومؤسسية تعنى
-              بشجرة الأنساب الموثقة، السجل المدني والمهني، والخدمات الاجتماعية
-              والتكافلية المتكاملة.
+              {siteTexts.heroSubtitle}
             </p>
 
             {/* CTA Actions */}
@@ -88,11 +87,10 @@ export default function Home() {
                   شعار الأمانة العامة
                 </span>
                 <h3 className="text-xl font-bold text-white mb-2">
-                  مجتمع وتكافل وتوثيق
+                  {siteTexts.heroLogoTitle}
                 </h3>
                 <span className="text-[10px] text-emerald-200/80 leading-relaxed font-semibold max-w-[200px]">
-                  سند دائم يربط الأسر والمحليات بفروعها في شتى أنحاء القطر
-                  السوداني الحبيب
+                  {siteTexts.heroLogoSubtitle}
                 </span>
               </div>
             </div>
@@ -111,8 +109,7 @@ export default function Home() {
               <span>مؤشرات السجل والإحصائيات العامة</span>
             </h2>
             <p className="text-xs text-muted-foreground font-semibold">
-              بيانات موثقة مرصودة وقابلة للتحديث المستمر لتسهيل التنمية والتواصل
-              الأسري.
+              بيانات موثقة مرصودة وقابلة للتحديث المستمر لتسهيل التنمية والتواصل الأسري.
             </p>
           </div>
 
@@ -123,7 +120,7 @@ export default function Home() {
               </div>
               <p className="text-xs font-bold text-muted-foreground">عدد الأعضاء المسجلين</p>
               <h3 className="text-2xl font-extrabold text-foreground" dir="ltr">
-                +{globalStatistics.totalRegisteredMembers.toLocaleString()}
+                +{totalRegistered.toLocaleString()}
               </h3>
             </div>
 
@@ -153,7 +150,7 @@ export default function Home() {
               </div>
               <p className="text-xs font-bold text-muted-foreground">العلماء والأكاديميون</p>
               <h3 className="text-2xl font-extrabold text-foreground" dir="ltr">
-                +{ (globalStatistics.scholarsCount + globalStatistics.academicsCount).toLocaleString() }
+                +{(globalStatistics.scholarsCount + globalStatistics.academicsCount).toLocaleString()}
               </h3>
             </div>
           </div>
@@ -164,9 +161,9 @@ export default function Home() {
           <div className="flex items-start gap-3 text-right">
             <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="font-extrabold text-amber-900 dark:text-amber-200 text-sm">تنبيه هام ومستعجل للأعضاء</h4>
+              <h4 className="font-extrabold text-amber-900 dark:text-amber-200 text-sm">{siteTexts.warningTitle}</h4>
               <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-semibold">
-                نهيب بالسادة الكرام ضرورة تحديث بيانات فروع عائلاتهم والمحليات المسجلين بها لضمان كفاءة وصول الدعم من صندوق التكافل العاجل.
+                {siteTexts.warningText}
               </p>
             </div>
           </div>
@@ -194,24 +191,24 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {newsDatabase.map((news) => (
+              {news.map((newsItem) => (
                 <div
-                  key={news.id}
+                  key={newsItem.id}
                   className="bg-card border border-border rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow duration-200 text-right flex flex-col justify-between"
                 >
                   <div className="p-5 space-y-3">
                     <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-primary">
-                      {news.category}
+                      {newsItem.category}
                     </span>
                     <h3 className="font-extrabold text-base text-foreground leading-snug hover:text-primary transition-colors">
-                      {news.title}
+                      {newsItem.title}
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium line-clamp-3">
-                      {news.summary}
+                      {newsItem.summary}
                     </p>
                   </div>
                   <div className="px-5 py-3 border-t border-border bg-muted/10 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-                    <span>تاريخ: {news.date}</span>
+                    <span>تاريخ: {newsItem.date}</span>
                     <Link href="/media" className="text-primary hover:underline flex items-center gap-1">
                       <span>اقرأ المزيد</span>
                       <ChevronRight className="w-3.5 h-3.5 shrink-0" />
@@ -231,7 +228,7 @@ export default function Home() {
             </div>
 
             <div className="space-y-4">
-              {eventsDatabase.map((event) => (
+              {events.map((event) => (
                 <div
                   key={event.id}
                   className="bg-card border border-border p-4 rounded-xl shadow-xs text-right space-y-3 hover:border-primary/40 transition-colors"
@@ -278,7 +275,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {servicesDatabase.map((service) => (
+            {services.map((service) => (
               <div
                 key={service.id}
                 className="bg-card border border-border p-5 rounded-xl shadow-xs text-right flex flex-col justify-between items-start hover:border-primary/50 transition-colors"

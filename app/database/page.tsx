@@ -3,15 +3,18 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { peopleDatabase, Person } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { Search, ShieldAlert, ShieldCheck, Filter, UserCheck, EyeOff } from "lucide-react";
 
 export default function Database() {
+  const { people } = useSiteStore();
   const [query, setQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
   const [selectedProfession, setSelectedProfession] = useState("all");
 
-  const statesList = Array.from(new Set(peopleDatabase.map(p => p.state)));
+  const activePeople = people && people.length > 0 ? people : [];
+
+  const statesList = Array.from(new Set(activePeople.map(p => p.state)));
   const professionsList = [
     { value: "scholar", label: "داعية / عالم شرعي" },
     { value: "academic", label: "أكاديمي / بروفيسور" },
@@ -26,7 +29,7 @@ export default function Database() {
   ];
 
   // Filtering Logic
-  const filteredMembers = peopleDatabase.filter((p) => {
+  const filteredMembers = activePeople.filter((p) => {
     const matchesQuery = p.name.includes(query) || (p.title && p.title.includes(query)) || p.family.includes(query) || p.branch.includes(query);
     const matchesState = selectedState === "all" || p.state === selectedState;
     const matchesProfession = selectedProfession === "all" || p.profession === selectedProfession;

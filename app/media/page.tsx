@@ -3,27 +3,18 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { newsDatabase } from "@/lib/mock-data";
+import { useSiteStore } from "@/lib/state-store";
 import { Image as ImageIcon, Video, FileText, Search, ExternalLink, HelpCircle, Film } from "lucide-react";
 
 export default function Media() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<"all" | "news" | "photos" | "videos" | "docs">("all");
 
-  const filteredNews = newsDatabase.filter(news =>
-    news.title.includes(searchQuery) || news.summary.includes(searchQuery)
+  const { news, photos, videos } = useSiteStore();
+
+  const filteredNews = news.filter(newsItem =>
+    newsItem.title.includes(searchQuery) || newsItem.summary.includes(searchQuery)
   );
-
-  const mockPhotos = [
-    { title: "خلوة دنقلا العجوز الأثرية للقرآن", desc: "بناء تاريخي عريق يمتد لأكثر من 500 عام.", tag: "تراث" },
-    { title: "صورة جماعية لملتقى السادة بنهر النيل", desc: "حضور لافت ومناقشات حول كفالة الأسر.", tag: "رسمي" },
-    { title: "أوقاف ومسجد السادة الركابية ببحري", desc: "منارة دينية واجتماعية وثقافية كبرى.", tag: "أوقاف" }
-  ];
-
-  const mockVideos = [
-    { title: "وثائقي: رحلة الشيخ غلام الله بن عايد", desc: "شرح مرئي مفصل لأول من أدخل الخلاوي الكبرى للسودان.", url: "https://www.youtube.com" },
-    { title: "تقرير مصور: تدشين المرحلة الرابعة لصندوق التكافل", desc: "تغطية ميدانية لتوزيع كفالة الأيتام للأسر والوافدين.", url: "https://www.youtube.com" }
-  ];
 
   const mockDocs = [
     { title: "كتاب: منارة الهدى في نسب الركابية الكبرى", desc: "أكبر مؤلف تاريخي شامل يتناول تاريخ الفروع وتفرعاتها.", author: "الشيخ عبد المجيد الركابي" },
@@ -49,72 +40,90 @@ export default function Media() {
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-12 space-y-12 text-right">
 
-        {/* Gallery navigation menu tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 border-b border-border">
-          <button
-            onClick={() => setActiveCategory("all")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              activeCategory === "all" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            استعراض الكل
-          </button>
-          <button
-            onClick={() => setActiveCategory("news")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              activeCategory === "news" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            الأخبار الرسمية والبيانات
-          </button>
-          <button
-            onClick={() => setActiveCategory("photos")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              activeCategory === "photos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            معرض الصور والآثار
-          </button>
-          <button
-            onClick={() => setActiveCategory("videos")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              activeCategory === "videos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            الفيديوهات والوثائقيات
-          </button>
-          <button
-            onClick={() => setActiveCategory("docs")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              activeCategory === "docs" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            المكتبة والمخطوطات
-          </button>
+        {/* Search bar and filters */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card border border-border p-4 rounded-xl">
+          <div className="relative w-full md:max-w-xs">
+            <Search className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="ابحث في الأخبار والبيانات..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-9 pl-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:ring-1 focus:ring-primary outline-hidden"
+            />
+          </div>
+
+          {/* Gallery navigation menu tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            <button
+              onClick={() => setActiveCategory("all")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                activeCategory === "all" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              استعراض الكل
+            </button>
+            <button
+              onClick={() => setActiveCategory("news")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                activeCategory === "news" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              الأخبار الرسمية والبيانات
+            </button>
+            <button
+              onClick={() => setActiveCategory("photos")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                activeCategory === "photos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              معرض الصور والآثار
+            </button>
+            <button
+              onClick={() => setActiveCategory("videos")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                activeCategory === "videos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              الفيديوهات والوثائقيات
+            </button>
+            <button
+              onClick={() => setActiveCategory("docs")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                activeCategory === "docs" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              المكتبة والمخطوطات
+            </button>
+          </div>
         </div>
 
         {/* 1. Official News section */}
         {(activeCategory === "all" || activeCategory === "news") && (
           <div className="space-y-6">
             <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">التقارير الإخبارية الأخيرة</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredNews.map((news) => (
-                <div key={news.id} className="bg-card border border-border p-5 rounded-2xl shadow-xs space-y-3 hover:border-primary/50 transition-colors">
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-primary">
-                    {news.category}
-                  </span>
-                  <h3 className="font-extrabold text-base text-foreground">{news.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{news.summary}</p>
-                  <p className="text-xs text-muted-foreground/80 leading-relaxed font-medium pt-2 border-t border-border">
-                    {news.content}
-                  </p>
-                  <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-                    <span>تاريخ النشر: {news.date}</span>
-                    <span className="font-bold text-primary">معتمد رسمي</span>
+            {filteredNews.length === 0 ? (
+              <p className="text-xs text-muted-foreground font-semibold">لا توجد نتائج تطابق بحثك.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredNews.map((newsItem) => (
+                  <div key={newsItem.id} className="bg-card border border-border p-5 rounded-2xl shadow-xs space-y-3 hover:border-primary/50 transition-colors">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-primary">
+                      {newsItem.category}
+                    </span>
+                    <h3 className="font-extrabold text-base text-foreground">{newsItem.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{newsItem.summary}</p>
+                    <p className="text-xs text-muted-foreground/80 leading-relaxed font-medium pt-2 border-t border-border">
+                      {newsItem.content}
+                    </p>
+                    <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
+                      <span>تاريخ النشر: {newsItem.date}</span>
+                      <span className="font-bold text-primary">معتمد رسمي</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -123,12 +132,16 @@ export default function Media() {
           <div className="space-y-6 pt-6">
             <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">أرشيف الصور ومعرض الآثار</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockPhotos.map((photo, idx) => (
-                <div key={idx} className="bg-card border border-border rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow">
+              {photos.map((photo) => (
+                <div key={photo.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow">
                   {/* Photo Placeholder vector layout */}
-                  <div className="aspect-video bg-emerald-950/20 flex flex-col items-center justify-center p-4 border-b border-border text-center">
-                    <ImageIcon className="w-10 h-10 text-primary mb-2 opacity-60" />
-                    <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">{photo.tag}</span>
+                  <div className="aspect-video bg-emerald-950/20 flex flex-col items-center justify-center p-4 border-b border-border text-center relative">
+                    {photo.image ? (
+                      <img src={photo.image} alt={photo.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-10 h-10 text-primary mb-2 opacity-60" />
+                    )}
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded relative z-10">{photo.tag}</span>
                   </div>
                   <div className="p-4 space-y-1">
                     <h4 className="font-extrabold text-sm text-foreground">{photo.title}</h4>
@@ -145,8 +158,8 @@ export default function Media() {
           <div className="space-y-6 pt-6">
             <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">الفيديوهات والوثائقيات</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockVideos.map((vid, idx) => (
-                <div key={idx} className="bg-card border border-border p-5 rounded-2xl shadow-xs text-right space-y-3 hover:border-primary/50 transition-colors">
+              {videos.map((vid) => (
+                <div key={vid.id} className="bg-card border border-border p-5 rounded-2xl shadow-xs text-right space-y-3 hover:border-primary/50 transition-colors">
                   <div className="flex items-center gap-2 text-primary font-bold">
                     <Film className="w-5 h-5 text-amber-500 shrink-0" />
                     <h4 className="text-sm font-extrabold text-foreground">{vid.title}</h4>
@@ -158,7 +171,7 @@ export default function Media() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline pt-2"
                   >
-                    <span>مشاهدة البث المرئي</span>
+                    <span>مشاهدة البث المرئي ({vid.url})</span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>
