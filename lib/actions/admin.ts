@@ -35,7 +35,6 @@ export async function verifyAdminUser() {
     ["super_admin", "secretary_general", "finance_manager", "executive_council"].includes(role)
   );
 
-  // If user has official admin role or admin domain
   if (isAdmin || user.email?.endsWith("@rikabiya.org")) {
     return { authorized: true, user, roles };
   }
@@ -47,7 +46,16 @@ export async function getAdminMetricsAction(): Promise<AdminMetrics> {
   try {
     const authCheck = await verifyAdminUser();
     if (!authCheck.authorized) {
-      console.warn("Unauthorized access attempt to getAdminMetricsAction:", authCheck.reason);
+      // Abort immediately if unauthorized
+      return {
+        totalMembers: 0,
+        pendingMembers: 0,
+        activeMembers: 0,
+        pendingPaymentsCount: 0,
+        approvedPaymentsTotal: 0,
+        socialRequestsCount: 0,
+        newsCount: 0,
+      };
     }
 
     const supabaseAdmin = createAdminClient();

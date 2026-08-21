@@ -193,17 +193,35 @@ export async function reviewPaymentReceiptAction(
           .update({ status: "active" })
           .eq("id", receipt.member_id);
 
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setFullYear(endDate.getFullYear() + 1);
+        const { data: memberData } = await supabaseAdmin
+          .from("members")
+          .select("plan_id")
+          .eq("id", receipt.member_id)
+          .single();
 
-        await supabaseAdmin.from("membership_subscriptions").insert({
-          member_id: receipt.member_id,
-          plan_id: receipt.plan_id || "00000000-0000-0000-0000-000000000000",
-          start_date: startDate.toISOString().split("T")[0],
-          end_date: endDate.toISOString().split("T")[0],
-          status: "active",
-        });
+        let planIdToUse = memberData?.plan_id;
+        if (!planIdToUse) {
+          const { data: defaultPlan } = await supabaseAdmin
+            .from("membership_plans")
+            .select("id")
+            .eq("code", "basic")
+            .single();
+          planIdToUse = defaultPlan?.id;
+        }
+
+        if (planIdToUse) {
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setFullYear(endDate.getFullYear() + 1);
+
+          await supabaseAdmin.from("membership_subscriptions").insert({
+            member_id: receipt.member_id,
+            plan_id: planIdToUse,
+            start_date: startDate.toISOString().split("T")[0],
+            end_date: endDate.toISOString().split("T")[0],
+            status: "active",
+          });
+        }
       }
 
       if (receipt.payment_type === "donation") {

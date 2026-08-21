@@ -1,9 +1,17 @@
 "use server";
 
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function submitSocialRequestAction(formData: FormData) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "عذراً، يلزم تسجيل الدخول لتقديم طلبات الدعم الاجتماعي والتكافل الأسري." };
+    }
+
     const supabaseAdmin = createAdminClient();
 
     const title = formData.get("title") as string;
@@ -11,7 +19,6 @@ export async function submitSocialRequestAction(formData: FormData) {
     const details = formData.get("details") as string;
     const amountStr = formData.get("amount") as string;
     const amountRequested = parseFloat(amountStr);
-    const userId = formData.get("userId") as string || null;
 
     if (!title || !category || !details || isNaN(amountRequested) || amountRequested <= 0) {
       return { success: false, error: "يرجى إدخال جميع التفاصيل المطلوبة والمبلغ المطلوب بشكل صحيح." };
@@ -20,7 +27,7 @@ export async function submitSocialRequestAction(formData: FormData) {
     const { data, error } = await supabaseAdmin
       .from("social_requests")
       .insert({
-        user_id: userId,
+        user_id: user.id,
         title: title.trim(),
         category,
         details: details.trim(),
