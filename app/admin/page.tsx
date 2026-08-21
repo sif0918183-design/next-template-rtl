@@ -1,48 +1,65 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import React, { useEffect, useState, useTransition } from "react";
 import { getAdminMetricsAction, getPendingPaymentsAction, AdminMetrics } from "@/lib/actions/admin";
 import { reviewPaymentReceiptAction, getReceiptSignedUrlAction } from "@/lib/actions/payments";
-import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText } from "lucide-react";
+import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
+import { getCurrentUserAction } from "@/lib/actions/auth";
+import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, UserCheck } from "lucide-react";
 
 export default function AdminDashboardPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passcode, setPasscode] = useState("");
-  const [authError, setAuthError] = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families">("overview");
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [newsList, setNewsList] = useState<any[]>([]);
+  const [mediaList, setMediaList] = useState<any[]>([]);
+  const [leadershipList, setLeadershipList] = useState<any[]>([]);
+  const [familiesList, setFamiliesList] = useState<any[]>([]);
+
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeReceiptId, setActiveReceiptId] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => {
+    async function checkAuth() {
+      setIsAuthLoading(true);
+      const userRes = await getCurrentUserAction();
+      setCurrentUser(userRes);
+      setIsAuthLoading(false);
+    }
+    checkAuth();
+  }, []);
+
   const loadAdminData = async () => {
     setIsLoading(true);
     const m = await getAdminMetricsAction();
     const p = await getPendingPaymentsAction();
+    const n = await getNewsAction();
+    const med = await getMediaAction();
+    const l = await getLeadershipAction();
+    const f = await getFamiliesAction();
+
     setMetrics(m);
     setPayments(p);
+    setNewsList(n);
+    setMediaList(med);
+    setLeadershipList(l);
+    setFamiliesList(f);
     setIsLoading(false);
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (currentUser?.isAdmin) {
       loadAdminData();
     }
-  }, [isAuthenticated]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode === "rk_admin_2026_secured") {
-      setIsAuthenticated(true);
-      setAuthError("");
-    } else {
-      setAuthError("رمز المرور غير صحيح. الرجاء إدخال رمز الوصول الإداري الموقت.");
-    }
-  };
+  }, [currentUser]);
 
   const handleReview = (receiptId: string, decision: "approve" | "reject") => {
     startTransition(async () => {
@@ -68,42 +85,118 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  const handleSaveNews = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await saveNewsAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleDeleteNews = (id: string) => {
+    if (!confirm("هل أنت تأكد من حذف هذا الخبر؟")) return;
+    startTransition(async () => {
+      const res = await deleteNewsAction(id);
+      if (res.success) loadAdminData();
+    });
+  };
+
+  const handleSaveMedia = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await saveMediaAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleDeleteMedia = (id: string) => {
+    if (!confirm("هل أنت تأكد من حذف هذه المادة؟")) return;
+    startTransition(async () => {
+      const res = await deleteMediaAction(id);
+      if (res.success) loadAdminData();
+    });
+  };
+
+  const handleSaveLeadership = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await saveLeadershipAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleDeleteLeadership = (id: string) => {
+    if (!confirm("هل أنت تأكد من حذف العضو القيادي؟")) return;
+    startTransition(async () => {
+      const res = await deleteLeadershipAction(id);
+      if (res.success) loadAdminData();
+    });
+  };
+
+  const handleSaveFamily = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await saveFamilyAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white dir-rtl">
+        <div className="text-center space-y-3">
+          <RefreshCw className="w-8 h-8 animate-spin text-amber-400 mx-auto" />
+          <p className="text-xs text-slate-400 font-medium">جاري التحقق من الصلاحيات الإدارية...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser || !currentUser.isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 dir-rtl text-white">
-        <div className="max-w-md w-full bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-500/40 mx-auto flex items-center justify-center text-emerald-400">
-              <Lock className="w-7 h-7" />
-            </div>
-            <h1 className="text-xl font-bold text-amber-400">لوحة التحكم والإدارة المؤسسية</h1>
-            <p className="text-xs text-slate-400">منصة السادة الركابية - الدائرة المالية والأمانة العامة</p>
+        <div className="max-w-md w-full bg-slate-900 border border-rose-500/30 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-rose-950 border border-rose-500/40 mx-auto flex items-center justify-center text-rose-400">
+            <Lock className="w-7 h-7" />
           </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-300 mb-1.5 font-medium">رمز الوصول المعتمد (Admin Security Code)</label>
-              <input
-                type="password"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="أدخل رمز الإدارة الحصري..."
-                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-amber-400"
-              />
-            </div>
-
-            {authError && <p className="text-xs text-red-400 font-semibold">{authError}</p>}
-
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-colors text-sm"
-            >
-              تسجيل الدخول الآمن
-            </button>
-          </form>
-          <div className="p-3 bg-slate-950 rounded-lg text-[11px] text-slate-400 text-center border border-slate-800">
-            💡 رمز الدخول التجريبي المعتمد لهذه البيئة: <span className="font-mono text-amber-400">rk_admin_2026_secured</span>
-          </div>
+          <h1 className="text-lg font-bold text-rose-400">منطقة إدارية سرية ومحمية</h1>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            عذراً، يجب تسجيل الدخول بحساب له صلاحيات إدارية نظامية (Super Admin / Finance / Council) للوصول لوحة التحكم.
+          </p>
+          <a
+            href="/login"
+            className="inline-block px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors"
+          >
+            الانتقال لبوابة تسجيل الدخول
+          </a>
         </div>
       </div>
     );
@@ -116,7 +209,7 @@ export default function AdminDashboardPage() {
         <div>
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold mb-1">
             <ShieldAlert className="w-4 h-4" />
-            النظام المؤسسي - الإدارة العليا للرقابة المالية والعضوية
+            نظام إدارة المحتوى المؤسسي (Central Institutional CMS)
           </div>
           <h1 className="text-2xl font-bold text-amber-400">لوحة التحكم التنفيذية الشاملة</h1>
         </div>
@@ -127,161 +220,395 @@ export default function AdminDashboardPage() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-xs font-semibold text-slate-200 transition-colors self-start md:self-auto"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-          تحديث البيانات الحية
+          مزامنة المحتوى وقاعدة البيانات
         </button>
       </div>
 
-      {/* Dynamic Metrics Cards - Displays EXACT 0 when empty */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-slate-900 border border-emerald-500/20 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>إجمالي الأعضاء المسجلين</span>
-            <Users className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-mono font-bold text-emerald-400">
-            {metrics ? metrics.totalMembers : 0}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between">
-            <span>نشط: {metrics?.activeMembers || 0}</span>
-            <span>قيد المراجعة: {metrics?.pendingMembers || 0}</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900 border border-amber-500/20 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>إيصالات قيد الانتظار</span>
-            <CreditCard className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-mono font-bold text-amber-400">
-            {metrics ? metrics.pendingPaymentsCount : 0}
-          </div>
-          <p className="text-[11px] text-slate-500">تحويلات تتطلب التدقيق المالي</p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>إجمالي المبالغ المعتمدة</span>
-            <FileText className="w-4 h-4 text-blue-400" />
-          </div>
-          <div className="text-xl font-mono font-bold text-blue-400">
-            {metrics ? metrics.approvedPaymentsTotal.toLocaleString() : 0} SDG
-          </div>
-          <p className="text-[11px] text-slate-500">مجموع التحويلات المؤكدة فقط</p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>طلبات التكافل الاجتماعي</span>
-            <HeartHandshake className="w-4 h-4 text-rose-400" />
-          </div>
-          <div className="text-2xl font-mono font-bold text-rose-400">
-            {metrics ? metrics.socialRequestsCount : 0}
-          </div>
-          <p className="text-[11px] text-slate-500">حالات مقدمة للدائرة الاجتماعية</p>
-        </div>
+      {/* Tabs Bar */}
+      <div className="flex flex-wrap gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "overview" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <Users className="w-4 h-4" /> الإحصائيات العامة
+        </button>
+        <button
+          onClick={() => setActiveTab("payments")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "payments" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <CreditCard className="w-4 h-4" /> المراجعة المالية ({metrics?.pendingPaymentsCount || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab("news")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "news" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <FileText className="w-4 h-4" /> الأخبار والبيانات ({newsList.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("media")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "media" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <ImageIcon className="w-4 h-4" /> معرض الوسائط ({mediaList.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("leadership")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "leadership" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <ShieldCheck className="w-4 h-4" /> الهيئة القيادية ({leadershipList.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("families")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "families" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <BookOpen className="w-4 h-4" /> سجل الأسر والنسب ({familiesList.length})
+        </button>
       </div>
 
-      {/* Payment Receipts Review Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-amber-400" />
-            سجل إيصالات التحويل البنكي للمراجعة والاعتماد
-          </h2>
-          <span className="text-xs px-3 py-1 bg-slate-800 rounded-full text-slate-400">
-            عدد السجلات: {payments.length}
-          </span>
-        </div>
-
-        {payments.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
-            لا توجد إيصالات أو معاملات قيد المراجعة حالياً.
+      {/* OVERVIEW TAB */}
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-emerald-500/20 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>إجمالي الأعضاء المسجلين</span>
+              <Users className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-emerald-400">
+              {metrics ? metrics.totalMembers : 0}
+            </div>
+            <div className="text-[11px] text-slate-500 flex justify-between">
+              <span>نشط: {metrics?.activeMembers || 0}</span>
+              <span>قيد المراجعة: {metrics?.pendingMembers || 0}</span>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="p-3">التاريخ</th>
-                  <th className="p-3">النوع</th>
-                  <th className="p-3">المبلغ (SDG)</th>
-                  <th className="p-3">رقم المعاملة</th>
-                  <th className="p-3">العضو / مقدم الطلب</th>
-                  <th className="p-3">الحالة</th>
-                  <th className="p-3 text-center">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {payments.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="p-3 font-mono text-slate-400">
-                      {new Date(p.created_at).toLocaleDateString("ar-SD")}
-                    </td>
-                    <td className="p-3 font-medium">
-                      {p.payment_type === "membership" ? "اشتراك عضوية" : "تبرع مساهمة"}
-                    </td>
-                    <td className="p-3 font-mono font-bold text-amber-400">
-                      {Number(p.amount).toLocaleString()}
-                    </td>
-                    <td className="p-3 font-mono text-slate-300">{p.transaction_reference}</td>
-                    <td className="p-3 text-slate-200">
-                      {p.members?.full_name || "متبرع / عضو مسجل"}
-                    </td>
-                    <td className="p-3">
-                      {p.status === "approved" ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          معتمد
-                        </span>
-                      ) : p.status === "rejected" ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          مرفوض
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          قيد المراجعة
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handlePreviewReceipt(p.receipt_path)}
-                          title="عرض صُورة الإيصال"
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
 
-                        {p.status === "pending_review" && (
-                          <>
-                            <button
-                              disabled={isPending}
-                              onClick={() => handleReview(p.id, "approve")}
-                              title="اعتماد الشفافية والتحويل"
-                              className="p-1.5 rounded-lg bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition-colors"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
+          <div className="p-5 rounded-2xl bg-slate-900 border border-amber-500/20 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>إيصالات قيد الانتظار</span>
+              <CreditCard className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-amber-400">
+              {metrics ? metrics.pendingPaymentsCount : 0}
+            </div>
+            <p className="text-[11px] text-slate-500">تحويلات تتطلب التدقيق المالي</p>
+          </div>
 
-                            <button
-                              disabled={isPending}
-                              onClick={() => setActiveReceiptId(p.id)}
-                              title="رفض الإيصال"
-                              className="p-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-500/40 text-rose-300 transition-colors"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>إجمالي المبالغ المعتمدة</span>
+              <FileText className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-xl font-mono font-bold text-blue-400">
+              {metrics ? metrics.approvedPaymentsTotal.toLocaleString() : 0} SDG
+            </div>
+            <p className="text-[11px] text-slate-500">مجموع التحويلات المؤكدة فقط</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>طلبات التكافل الاجتماعي</span>
+              <HeartHandshake className="w-4 h-4 text-rose-400" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-rose-400">
+              {metrics ? metrics.socialRequestsCount : 0}
+            </div>
+            <p className="text-[11px] text-slate-500">حالات مقدمة للدائرة الاجتماعية</p>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENTS TAB */}
+      {activeTab === "payments" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-amber-400" />
+              سجل إيصالات التحويل البنكي للمراجعة والاعتماد
+            </h2>
+            <span className="text-xs px-3 py-1 bg-slate-800 rounded-full text-slate-400">
+              عدد السجلات: {payments.length}
+            </span>
+          </div>
+
+          {payments.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
+              لا توجد إيصالات أو معاملات قيد المراجعة حالياً.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">التاريخ</th>
+                    <th className="p-3">النوع</th>
+                    <th className="p-3">المبلغ (SDG)</th>
+                    <th className="p-3">رقم المعاملة</th>
+                    <th className="p-3">العضو / مقدم الطلب</th>
+                    <th className="p-3">الحالة</th>
+                    <th className="p-3 text-center">الإجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {payments.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="p-3 font-mono text-slate-400">
+                        {new Date(p.created_at).toLocaleDateString("ar-SD")}
+                      </td>
+                      <td className="p-3 font-medium">
+                        {p.payment_type === "membership" ? "اشتراك عضوية" : "تبرع مساهمة"}
+                      </td>
+                      <td className="p-3 font-mono font-bold text-amber-400">
+                        {Number(p.amount).toLocaleString()}
+                      </td>
+                      <td className="p-3 font-mono text-slate-300">{p.transaction_reference}</td>
+                      <td className="p-3 text-slate-200">
+                        {p.members?.full_name || "متبرع / عضو مسجل"}
+                      </td>
+                      <td className="p-3">
+                        {p.status === "approved" ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            معتمد
+                          </span>
+                        ) : p.status === "rejected" ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            مرفوض
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            قيد المراجعة
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handlePreviewReceipt(p.receipt_path)}
+                            title="عرض صُورة الإيصال"
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {p.status === "pending_review" && (
+                            <>
+                              <button
+                                disabled={isPending}
+                                onClick={() => handleReview(p.id, "approve")}
+                                title="اعتماد التحويل"
+                                className="p-1.5 rounded-lg bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition-colors"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                disabled={isPending}
+                                onClick={() => setActiveReceiptId(p.id)}
+                                title="رفض الإيصال"
+                                className="p-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-500/40 text-rose-300 transition-colors"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* NEWS CMS TAB */}
+      {activeTab === "news" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> إضافة/نشر خبر جديد
+            </h3>
+            <form onSubmit={handleSaveNews} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">عنوان الخبر الرئيسي *</label>
+                <input name="title" required placeholder="عنوان الخبر..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">الموجز التنفيذي</label>
+                <input name="excerpt" placeholder="موجز عن الخبر..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">نص الخبر الكامل *</label>
+                <textarea name="content" required rows={4} placeholder="تفاصيل الخبر..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">رابط الصورة البارزة (URL)</label>
+                <input name="featuredImage" placeholder="https://..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-colors">
+                نشر الخبر فوراً
+              </button>
+            </form>
           </div>
-        )}
-      </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">الأخبار والبيانات المنشورة ({newsList.length})</h3>
+            {newsList.length === 0 ? (
+              <p className="text-xs text-slate-500">لا توجد أخبار منشورة حالياً في قاعدة البيانات.</p>
+            ) : (
+              <div className="space-y-3">
+                {newsList.map((n) => (
+                  <div key={n.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-100">{n.title}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleDateString("ar-SD")}</div>
+                    </div>
+                    <button onClick={() => handleDeleteNews(n.id)} className="p-2 text-rose-400 hover:bg-rose-950/40 rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MEDIA CMS TAB */}
+      {activeTab === "media" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> إضافة مادة لمعرض الوسائط
+            </h3>
+            <form onSubmit={handleSaveMedia} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">نوع المادة</label>
+                <select name="mediaType" className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                  <option value="photo">صورة توثيقية</option>
+                  <option value="video">فيديو وثائقي</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">العنوان *</label>
+                <input name="title" required placeholder="عنوان المادة..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">رابط الصورة/الفيديو (URL) *</label>
+                <input name="url" required placeholder="https://..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+                حفظ في المعرض
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">مواد المعرض الرقمي ({mediaList.length})</h3>
+            {mediaList.length === 0 ? (
+              <p className="text-xs text-slate-500">لا توجد وسائط مضافة حالياً في قاعدة البيانات.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {mediaList.map((m) => (
+                  <div key={m.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-200">{m.title}</div>
+                      <div className="text-[10px] text-amber-400">{m.media_type === "photo" ? "صورة" : "فيديو"}</div>
+                    </div>
+                    <button onClick={() => handleDeleteMedia(m.id)} className="p-1.5 text-rose-400 hover:bg-rose-950/40 rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* LEADERSHIP CMS TAB */}
+      {activeTab === "leadership" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> إضافة عضو للهيئة القيادية
+            </h3>
+            <form onSubmit={handleSaveLeadership} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">الاسم الكامل *</label>
+                <input name="fullName" required placeholder="الاسم رباعياً..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">المنصب القيادي *</label>
+                <input name="roleTitle" required placeholder="مثال: رئيس المجلس / الأمين العام..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+                إضافة العضو القيادي
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">أعضاء الهيئة القيادية المعتمدون ({leadershipList.length})</h3>
+            {leadershipList.length === 0 ? (
+              <p className="text-xs text-slate-500">سيتم الإعلان عن أعضاء القيادة فور اعتمادهم في قاعدة البيانات.</p>
+            ) : (
+              <div className="space-y-3">
+                {leadershipList.map((l) => (
+                  <div key={l.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-100">{l.full_name}</div>
+                      <div className="text-[11px] text-amber-400">{l.role_title}</div>
+                    </div>
+                    <button onClick={() => handleDeleteLeadership(l.id)} className="p-2 text-rose-400 hover:bg-rose-950/40 rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* FAMILIES CMS TAB */}
+      {activeTab === "families" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> إدخال أسرة/عائلة جديدة
+            </h3>
+            <form onSubmit={handleSaveFamily} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">اسم الأسرة / الفخذ *</label>
+                <input name="nameAr" required placeholder="اسم الأسرة..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">المنشأ التاريخي والمحلية</label>
+                <input name="locality" placeholder="المحلية / الولاية..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+                اعتماد الأسرة في النسب
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">سجل الأسر الموثقة ({familiesList.length})</h3>
+            {familiesList.length === 0 ? (
+              <p className="text-xs text-slate-500">لا توجد أسر مسجلة حالياً في قاعدة البيانات.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {familiesList.map((f) => (
+                  <div key={f.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                    <div className="font-bold text-slate-100">{f.name_ar}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{f.main_locality || "السودان"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal for Rejection Reason */}
       {activeReceiptId && (
@@ -291,7 +618,7 @@ export default function AdminDashboardPage() {
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="اكتب سبب الرفض المالي (مثال: الإيصال غير واضح أو المبلغ لا يطابق)..."
+              placeholder="اكتب سبب الرفض المالي..."
               className="w-full h-24 p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-rose-500"
             />
             <div className="flex justify-end gap-2 text-xs font-semibold">
