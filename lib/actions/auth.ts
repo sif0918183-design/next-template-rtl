@@ -13,12 +13,12 @@ export interface AuthResult {
 
 /**
  * Initial Administrator Provisioning Action
- * Uses env or secure defaults to provision the super_admin account.
+ * Uses env or secure defaults (default email: admin@rikabiya.org, default pass: 12345678)
  */
 export async function provisionInitialAdminAction(): Promise<AuthResult> {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || "admin@rikabiya.org";
-    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || "rikaby123456";
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || "12345678";
 
     const supabaseAdmin = createAdminClient();
 
@@ -33,7 +33,7 @@ export async function provisionInitialAdminAction(): Promise<AuthResult> {
       return { success: false, error: "دور المشرف العام (super_admin) غير موجود بجدول الأدوار." };
     }
 
-    // Try signing up or getting existing user
+    // Try creating user or fetching existing
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: adminEmail,
       password: adminPassword,
@@ -46,7 +46,6 @@ export async function provisionInitialAdminAction(): Promise<AuthResult> {
     let userId: string | null = authUser.user?.id || null;
 
     if (authError && authError.message.includes("already been registered")) {
-      // Fetch user ID
       const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
       const existingUser = usersList.users.find((u) => u.email === adminEmail);
       if (existingUser) {
@@ -150,7 +149,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
     revalidatePath("/");
     return {
       success: true,
-      message: "تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول واستفادة من كافة خدمات المنصة.",
+      message: "تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول والاستفادة من كافة خدمات المنصة.",
       user: authData.user,
     };
   } catch (err) {
@@ -160,7 +159,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
 }
 
 /**
- * Real Supabase Auth SignIn Action
+ * Real Supabase Auth SignIn Action with Auto-Provisioning for Admin Email
  */
 export async function signInAction(formData: FormData): Promise<AuthResult> {
   try {
@@ -169,6 +168,12 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
 
     if (!email || !password) {
       return { success: false, error: "يرجى إدخال البريد الإلكتروني وكلمة المرور." };
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@rikabiya.org";
+    if (email === adminEmail) {
+      // Provision admin if first time
+      await provisionInitialAdminAction();
     }
 
     const supabase = await createClient();
@@ -182,6 +187,7 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
     }
 
     revalidatePath("/");
+    revalidatePath("/admin");
     return {
       success: true,
       message: "تم تسجيل الدخول بنجاح.",
@@ -194,6 +200,37 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
 }
 
 /**
+ * Change Admin Password Action
+ */
+export async function changeAdminPasswordAction(newPassword: string): Promise<AuthResult> {
+  try {
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: "كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف." };
+    }
+
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, error: "يجب تسجيل الدخول كمدير للنظام لتغيير كلمة المرور." };
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      return { success: false, error: updateError.message || "حدث خطأ أثناء تحديث كلمة المرور." };
+    }
+
+    return { success: true, message: "تم تغيير كلمة المرور بنجاح! استخدم كلمة المرور الجديدة في المرات القادمة." };
+  } catch (err) {
+    console.error("Change Password Error:", err);
+    return { success: false, error: "حدث خطأ غير متوقع أثناء تغيير كلمة المرور." };
+  }
+}
+
+/**
  * Real Supabase Auth SignOut Action
  */
 export async function signOutAction(): Promise<AuthResult> {
@@ -201,6 +238,7 @@ export async function signOutAction(): Promise<AuthResult> {
     const supabase = await createClient();
     await supabase.auth.signOut();
     revalidatePath("/");
+    revalidatePath("/admin");
     return { success: true, message: "تم تسجيل الخروج بنجاح." };
   } catch {
     return { success: false, error: "حدث خطأ أثناء تسجيل الخروج." };

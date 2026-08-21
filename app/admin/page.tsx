@@ -4,14 +4,15 @@ import React, { useEffect, useState, useTransition } from "react";
 import { getAdminMetricsAction, getPendingPaymentsAction, AdminMetrics } from "@/lib/actions/admin";
 import { reviewPaymentReceiptAction, getReceiptSignedUrlAction } from "@/lib/actions/payments";
 import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
-import { getCurrentUserAction } from "@/lib/actions/auth";
-import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, UserCheck } from "lucide-react";
+import { getCurrentUserAction, signInAction, changeAdminPasswordAction } from "@/lib/actions/auth";
+import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, KeyRound, AlertCircle } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families" | "security">("overview");
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
@@ -25,15 +26,20 @@ export default function AdminDashboardPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeReceiptId, setActiveReceiptId] = useState<string | null>(null);
 
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const [isPending, startTransition] = useTransition();
 
+  const checkAuth = async () => {
+    setIsAuthLoading(true);
+    const userRes = await getCurrentUserAction();
+    setCurrentUser(userRes);
+    setIsAuthLoading(false);
+  };
+
   useEffect(() => {
-    async function checkAuth() {
-      setIsAuthLoading(true);
-      const userRes = await getCurrentUserAction();
-      setCurrentUser(userRes);
-      setIsAuthLoading(false);
-    }
     checkAuth();
   }, []);
 
@@ -60,6 +66,37 @@ export default function AdminDashboardPage() {
       loadAdminData();
     }
   }, [currentUser]);
+
+  const handleAdminLogin = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoginError("");
+
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await signInAction(formData);
+      if (res.success) {
+        await checkAuth();
+      } else {
+        setLoginError(res.error || "فشل تسجيل الدخول كمدير للنظام.");
+      }
+    });
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMsg("");
+    setPasswordError("");
+
+    startTransition(async () => {
+      const res = await changeAdminPasswordAction(newPassword);
+      if (res.success) {
+        setPasswordMsg(res.message || "تم تحديث كلمة المرور بنجاح.");
+        setNewPassword("");
+      } else {
+        setPasswordError(res.error || "فشل تحديث كلمة المرور.");
+      }
+    });
+  };
 
   const handleReview = (receiptId: string, decision: "approve" | "reject") => {
     startTransition(async () => {
@@ -183,20 +220,58 @@ export default function AdminDashboardPage() {
   if (!currentUser || !currentUser.isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 dir-rtl text-white">
-        <div className="max-w-md w-full bg-slate-900 border border-rose-500/30 rounded-2xl p-6 shadow-2xl text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-rose-950 border border-rose-500/40 mx-auto flex items-center justify-center text-rose-400">
-            <Lock className="w-7 h-7" />
+        <div className="max-w-md w-full bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-500/40 mx-auto flex items-center justify-center text-amber-400">
+              <Lock className="w-7 h-7" />
+            </div>
+            <h1 className="text-xl font-bold text-amber-400">تسجيل الدخول للوحة الإدارة والتحكم</h1>
+            <p className="text-xs text-slate-400">منصة السادة الركابية - الأمانة العامة</p>
           </div>
-          <h1 className="text-lg font-bold text-rose-400">منطقة إدارية سرية ومحمية</h1>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            عذراً، يجب تسجيل الدخول بحساب له صلاحيات إدارية نظامية (Super Admin / Finance / Council) للوصول لوحة التحكم.
-          </p>
-          <a
-            href="/login"
-            className="inline-block px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors"
-          >
-            الانتقال لبوابة تسجيل الدخول
-          </a>
+
+          {loginError && (
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">بريد المدير الإلكتروني (Default: admin@rikabiya.org)</label>
+              <input
+                name="email"
+                type="email"
+                required
+                defaultValue="admin@rikabiya.org"
+                placeholder="admin@rikabiya.org"
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">كلمة المرور (Default: 12345678)</label>
+              <input
+                name="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-colors text-xs"
+            >
+              {isPending ? "جاري التحقق من الصلاحيات..." : "تسجيل الدخول إلى لوحة التحكم"}
+            </button>
+          </form>
+
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 text-center">
+            🔒 كلمة المرور الافتراضية للبدء هي: <span className="font-mono text-amber-400 font-bold">12345678</span> (يمكنك تعديلها لاحقاً من داخل اللوحة).
+          </div>
         </div>
       </div>
     );
@@ -262,6 +337,12 @@ export default function AdminDashboardPage() {
         >
           <BookOpen className="w-4 h-4" /> سجل الأسر والنسب ({familiesList.length})
         </button>
+        <button
+          onClick={() => setActiveTab("security")}
+          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "security" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <KeyRound className="w-4 h-4" /> تغيير كلمة المرور
+        </button>
       </div>
 
       {/* OVERVIEW TAB */}
@@ -313,6 +394,52 @@ export default function AdminDashboardPage() {
             </div>
             <p className="text-[11px] text-slate-500">حالات مقدمة للدائرة الاجتماعية</p>
           </div>
+        </div>
+      )}
+
+      {/* SECURITY TAB */}
+      {activeTab === "security" && (
+        <div className="max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h3 className="text-sm font-bold text-amber-400 flex items-center gap-2">
+            <KeyRound className="w-5 h-5" /> تغيير كلمة المرور الخاصة بحساب المدير
+          </h3>
+
+          {passwordMsg && (
+            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{passwordMsg}</span>
+            </div>
+          )}
+
+          {passwordError && (
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{passwordError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">كلمة المرور الجديدة (6 أحرف على الأقل)</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="أدخل كلمة المرور الجديدة..."
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending || !newPassword}
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-colors"
+            >
+              تأكيد وحفظ كلمة المرور الجديدة
+            </button>
+          </form>
         </div>
       )}
 
