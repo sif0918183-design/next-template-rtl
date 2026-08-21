@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdminUser } from "@/lib/actions/admin";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult<T = unknown> {
@@ -62,7 +63,7 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
       return { success: false, error: "رقم المعاملة / مرجع التحويل مسجل مسبقاً في النظام." };
     }
 
-    // 1. Upload to Supabase Storage 'payment-receipts'
+    // Upload to Supabase Storage 'payment-receipts'
     const fileExt = file.name.split(".").pop() || "jpg";
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const filePath = `receipts/${fileName}`;
@@ -77,10 +78,9 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
 
     if (uploadError) {
       console.error("Storage Upload Error:", uploadError);
-      // Fallback: Store receipt_path directly as reference if bucket auto-creation is needed
     }
 
-    // 2. Insert Payment Receipt
+    // Insert Payment Receipt
     const { data: receipt, error: insertError } = await supabaseAdmin
       .from("payment_receipts")
       .insert({
@@ -102,7 +102,6 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
       return { success: false, error: "حدث خطأ أثناء حفظ بيانات الإيصال. يرجى المحاولة مرة أخرى." };
     }
 
-    // 3. If donation, record pending donation link
     if (paymentType === "donation" && receipt) {
       await supabaseAdmin.from("donations").insert({
         receipt_id: receipt.id,
@@ -130,15 +129,20 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
 
 /**
  * Server Action for Administrative Approval or Rejection of Payments.
- * Enforces financial integrity and triggers updates server-side.
+ * Strictly protected by server-side authorization check.
  */
 export async function reviewPaymentReceiptAction(
   receiptId: string,
   decision: "approve" | "reject",
-  rejectionReason: string = "",
-  reviewerUserId: string = ""
+  rejectionReason: string = ""
 ): Promise<ActionResult> {
   try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return { success: false, error: "عذراً، لا تمتلك الصلاحيات الإدارية المتميزة لإجراء هذا الاعتماد المالي." };
+    }
+
+    const reviewerUserId = authCheck.user?.id || null;
     const supabaseAdmin = createAdminClient();
 
     const { data: receipt, error: fetchError } = await supabaseAdmin
@@ -157,13 +161,12 @@ export async function reviewPaymentReceiptAction(
 
     const newStatus = decision === "approve" ? "approved" : "rejected";
 
-    // Update payment receipt
     const { error: updateError } = await supabaseAdmin
       .from("payment_receipts")
       .update({
         status: newStatus,
         rejection_reason: decision === "reject" ? rejectionReason : null,
-        reviewed_by: reviewerUserId || null,
+        reviewed_by: reviewerUserId,
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", receiptId);
@@ -172,9 +175,7 @@ export async function reviewPaymentReceiptAction(
       return { success: false, error: "حدث خطأ أثناء تحديث حالة الإيصال." };
     }
 
-    // If APPROVED: Execute financial workflow
     if (decision === "approve") {
-      // 1. Create Financial Transaction
       const refNumber = `TRX-${Date.now().toString().slice(-8)}`;
       await supabaseAdmin.from("financial_transactions").insert({
         receipt_id: receipt.id,
@@ -183,17 +184,15 @@ export async function reviewPaymentReceiptAction(
         amount: receipt.amount,
         reference_number: refNumber,
         description: `اعتماد إشعار تحويل رقم: ${receipt.transaction_reference}`,
-        created_by: reviewerUserId || null,
+        created_by: reviewerUserId,
       });
 
-      // 2. If membership, activate member and extend subscription
       if (receipt.payment_type === "membership" && receipt.member_id) {
         await supabaseAdmin
           .from("members")
           .update({ status: "active" })
           .eq("id", receipt.member_id);
 
-        // Subscription update
         const startDate = new Date();
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1);
@@ -207,7 +206,6 @@ export async function reviewPaymentReceiptAction(
         });
       }
 
-      // 3. If donation, update campaign current_amount
       if (receipt.payment_type === "donation") {
         const { data: donation } = await supabaseAdmin
           .from("donations")
@@ -237,9 +235,8 @@ export async function reviewPaymentReceiptAction(
         }
       }
 
-      // 4. Record Audit Log
       await supabaseAdmin.from("audit_logs").insert({
-        user_id: reviewerUserId || null,
+        user_id: reviewerUserId,
         action: "APPROVE_PAYMENT",
         entity_type: "payment_receipts",
         entity_id: receipt.id,
@@ -247,9 +244,8 @@ export async function reviewPaymentReceiptAction(
         after_state: { status: "approved", amount: receipt.amount },
       });
     } else {
-      // Record Audit Log for Rejection
       await supabaseAdmin.from("audit_logs").insert({
-        user_id: reviewerUserId || null,
+        user_id: reviewerUserId,
         action: "REJECT_PAYMENT",
         entity_type: "payment_receipts",
         entity_id: receipt.id,
@@ -271,10 +267,15 @@ export async function reviewPaymentReceiptAction(
  */
 export async function getReceiptSignedUrlAction(filePath: string): Promise<string | null> {
   try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return null;
+    }
+
     const supabaseAdmin = createAdminClient();
     const { data, error } = await supabaseAdmin.storage
       .from("payment-receipts")
-      .createSignedUrl(filePath, 3600); // 1 hour validity
+      .createSignedUrl(filePath, 3600);
 
     if (error || !data) return null;
     return data.signedUrl;

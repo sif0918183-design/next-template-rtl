@@ -14,18 +14,16 @@ export interface AdminMetrics {
 }
 
 /**
- * Server-side helper to verify caller has administrative role.
+ * Server-side helper to strictly verify caller has administrative session & permissions.
  */
-async function verifyAdminUser() {
+export async function verifyAdminUser() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (!user) {
-    // If not logged in via Supabase Auth session, check header or deny
-    return { authorized: false, user: null };
+  if (authError || !user) {
+    return { authorized: false, user: null, reason: "المستخدم غير مسجّل دخول" };
   }
 
-  // Check role in user_roles or profiles
   const supabaseAdmin = createAdminClient();
   const { data: userRoles } = await supabaseAdmin
     .from("user_roles")
@@ -37,37 +35,42 @@ async function verifyAdminUser() {
     ["super_admin", "secretary_general", "finance_manager", "executive_council"].includes(role)
   );
 
-  return { authorized: isAdmin || user.email?.endsWith("@rikabiya.org") || true, user };
+  // If user has official admin role or admin domain
+  if (isAdmin || user.email?.endsWith("@rikabiya.org")) {
+    return { authorized: true, user, roles };
+  }
+
+  return { authorized: false, user, reason: "لا تملك الصلاحيات الإدارية المطلوبة" };
 }
 
 export async function getAdminMetricsAction(): Promise<AdminMetrics> {
   try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      console.warn("Unauthorized access attempt to getAdminMetricsAction:", authCheck.reason);
+    }
+
     const supabaseAdmin = createAdminClient();
 
-    // Total members
     const { count: totalMembers } = await supabaseAdmin
       .from("members")
       .select("*", { count: "exact", head: true });
 
-    // Pending members
     const { count: pendingMembers } = await supabaseAdmin
       .from("members")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending");
 
-    // Active members
     const { count: activeMembers } = await supabaseAdmin
       .from("members")
       .select("*", { count: "exact", head: true })
       .eq("status", "active");
 
-    // Pending receipts
     const { count: pendingPaymentsCount } = await supabaseAdmin
       .from("payment_receipts")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending_review");
 
-    // Approved payments total
     const { data: approvedReceipts } = await supabaseAdmin
       .from("payment_receipts")
       .select("amount")
@@ -77,12 +80,10 @@ export async function getAdminMetricsAction(): Promise<AdminMetrics> {
       ? approvedReceipts.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
       : 0;
 
-    // Social requests count
     const { count: socialRequestsCount } = await supabaseAdmin
       .from("social_requests")
       .select("*", { count: "exact", head: true });
 
-    // News count
     const { count: newsCount } = await supabaseAdmin
       .from("news")
       .select("*", { count: "exact", head: true });
@@ -112,6 +113,11 @@ export async function getAdminMetricsAction(): Promise<AdminMetrics> {
 
 export async function getPendingPaymentsAction() {
   try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return [];
+    }
+
     const supabaseAdmin = createAdminClient();
     const { data, error } = await supabaseAdmin
       .from("payment_receipts")
