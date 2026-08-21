@@ -1,4 +1,10 @@
--- Seed initial institutional configuration data
+-- ====================================================================
+-- Production Seed Data for Al-Rikabiyyah Platform
+-- File: supabase/seed.sql
+-- Strictly configuration-only data. NO fake members or fake donations.
+-- ====================================================================
+
+-- 1. Membership Plans
 INSERT INTO public.membership_plans (name_ar, code, price_sdg, duration_months, description, features)
 VALUES
   ('العضوية الأساسية', 'basic', 10000.00, 12, 'العضوية المجتمعية العامة لأبناء السادة الركابية', '["بطاقة عضوية رقمية", "المشاركة في اللقاءات والمؤتمرات العامة", "الاستفادة من برامج خدمات التكافل"]'::jsonb),
@@ -7,6 +13,7 @@ VALUES
 ON CONFLICT (code) DO UPDATE
 SET price_sdg = EXCLUDED.price_sdg, description = EXCLUDED.description;
 
+-- 2. Payment Methods
 INSERT INTO public.payment_methods (name_ar, provider, account_name, account_number, phone_number, instructions, sort_order)
 VALUES
   ('بنكك - بنك الخرطوم', 'Bankak', 'منصة السادة الركابية الرقمية', '1234567', '0912345678', 'يرجى تحويل المبلغ وحفظ إشعار المعاملة للرفع', 1),
@@ -14,6 +21,7 @@ VALUES
   ('فوري - الفيصل الإسلامي', 'Fawry', 'صندوق التكافل الركابي', '9876543', '0912345680', 'إرفاق صورة الإشعار إجباري للمراجعة المالية', 3)
 ON CONFLICT DO NOTHING;
 
+-- 3. Departments
 INSERT INTO public.departments (code, name_ar, description)
 VALUES
   ('social', 'الدائرة الاجتماعية', 'إدارة برامج التكافل، الإغاثة، والدعم الأسري'),
@@ -31,6 +39,7 @@ VALUES
   ('expatriates', 'دائرة المغتربين', 'ربط أبناء الركابية بالخارج بالمبادرات الوطنية')
 ON CONFLICT (code) DO NOTHING;
 
+-- 4. Roles
 INSERT INTO public.roles (code, name_ar, description)
 VALUES
   ('super_admin', 'المشرف العام', 'صلاحيات كاملة لإدارة النظام، المستخدمين، والصلاحيات'),
