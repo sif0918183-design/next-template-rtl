@@ -12,6 +12,76 @@ export interface AuthResult {
 }
 
 /**
+ * Initial Administrator Provisioning Action
+ * Uses env or secure defaults to provision the super_admin account.
+ */
+export async function provisionInitialAdminAction(): Promise<AuthResult> {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@rikabiya.org";
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || "rikaby123456";
+
+    const supabaseAdmin = createAdminClient();
+
+    // Check if super_admin role exists
+    const { data: superAdminRole } = await supabaseAdmin
+      .from("roles")
+      .select("id")
+      .eq("code", "super_admin")
+      .single();
+
+    if (!superAdminRole) {
+      return { success: false, error: "دور المشرف العام (super_admin) غير موجود بجدول الأدوار." };
+    }
+
+    // Try signing up or getting existing user
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: adminEmail,
+      password: adminPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: "المشرف العام - الأمانة العامة",
+      },
+    });
+
+    let userId: string | null = authUser.user?.id || null;
+
+    if (authError && authError.message.includes("already been registered")) {
+      // Fetch user ID
+      const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = usersList.users.find((u) => u.email === adminEmail);
+      if (existingUser) {
+        userId = existingUser.id;
+      }
+    }
+
+    if (!userId) {
+      return { success: false, error: "تعذر إنشاء حساب المشرف الأساسي." };
+    }
+
+    // Ensure Profile exists
+    await supabaseAdmin.from("profiles").upsert({
+      id: userId,
+      full_name: "المشرف العام - الأمانة العامة",
+      updated_at: new Date().toISOString(),
+    });
+
+    // Assign super_admin role
+    await supabaseAdmin.from("user_roles").upsert({
+      user_id: userId,
+      role_id: superAdminRole.id,
+    });
+
+    return {
+      success: true,
+      message: `تم تهيئة وتجهيز حساب المشرف العام بنجاح (${adminEmail}).`,
+    };
+  } catch (err) {
+    console.error("Provision Admin Error:", err);
+    return { success: false, error: "حدث خطأ أثناء تهيئة حساب المشرف." };
+  }
+}
+
+/**
  * Real Supabase Auth SignUp Action
  */
 export async function signUpAction(formData: FormData): Promise<AuthResult> {
@@ -80,7 +150,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
     revalidatePath("/");
     return {
       success: true,
-      message: "تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول والاستفادة من كافة خدمات المنصة.",
+      message: "تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول واستفادة من كافة خدمات المنصة.",
       user: authData.user,
     };
   } catch (err) {

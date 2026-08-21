@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { Award, Shield, Users, BookOpen, HeartHandshake, MapPin, Building2 } from "lucide-react";
-import { getApprovedFinancialStatsAction } from "@/lib/actions/finance";
-import { getAdminMetricsAction } from "@/lib/actions/admin";
+import { getPublicSiteStatsAction } from "@/lib/actions/public-stats";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const financialStats = await getApprovedFinancialStatsAction();
-  const adminMetrics = await getAdminMetricsAction();
+  const publicStats = await getPublicSiteStatsAction();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white dir-rtl">
@@ -64,7 +62,7 @@ export default async function HomePage() {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2">
               <Users className="w-6 h-6 text-emerald-400 mx-auto" />
               <div className="text-2xl font-mono font-bold text-slate-100">
-                {adminMetrics.totalMembers}
+                {publicStats.totalActiveMembers}
               </div>
               <div className="text-xs text-slate-400 font-medium">أعضاء موثقون</div>
             </div>
@@ -72,7 +70,7 @@ export default async function HomePage() {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2">
               <Building2 className="w-6 h-6 text-amber-400 mx-auto" />
               <div className="text-2xl font-mono font-bold text-slate-100">
-                {financialStats.totalApprovedDonations.toLocaleString()} SDG
+                {publicStats.totalApprovedDonations.toLocaleString()} SDG
               </div>
               <div className="text-xs text-slate-400 font-medium">تبرعات معتمدة</div>
             </div>
@@ -80,7 +78,7 @@ export default async function HomePage() {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2">
               <HeartHandshake className="w-6 h-6 text-rose-400 mx-auto" />
               <div className="text-2xl font-mono font-bold text-slate-100">
-                {financialStats.activeCampaignsCount}
+                {publicStats.activeCampaignsCount}
               </div>
               <div className="text-xs text-slate-400 font-medium">حملات تكافلية نشطة</div>
             </div>
@@ -88,7 +86,7 @@ export default async function HomePage() {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2">
               <Award className="w-6 h-6 text-blue-400 mx-auto" />
               <div className="text-2xl font-mono font-bold text-slate-100">
-                {financialStats.totalApprovedMemberships.toLocaleString()} SDG
+                {publicStats.totalApprovedMemberships.toLocaleString()} SDG
               </div>
               <div className="text-xs text-slate-400 font-medium">اشتراكات مفعلة</div>
             </div>

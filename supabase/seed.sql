@@ -1,7 +1,7 @@
 -- ====================================================================
 -- Production Seed Data for Al-Rikabiyyah Platform
 -- File: supabase/seed.sql
--- Strictly configuration-only data. NO fake members or fake donations.
+-- Strictly configuration-only data. NO fake members, donations, or fake account numbers.
 -- ====================================================================
 
 -- 1. Membership Plans
@@ -13,12 +13,12 @@ VALUES
 ON CONFLICT (code) DO UPDATE
 SET price_sdg = EXCLUDED.price_sdg, description = EXCLUDED.description;
 
--- 2. Payment Methods
+-- 2. Payment Methods (Generic System Accounts)
 INSERT INTO public.payment_methods (name_ar, provider, account_name, account_number, phone_number, instructions, sort_order)
 VALUES
-  ('بنكك - بنك الخرطوم', 'Bankak', 'منصة السادة الركابية الرقمية', '1234567', '0912345678', 'يرجى تحويل المبلغ وحفظ إشعار المعاملة للرفع', 1),
-  ('أوكاش - بنك أمدرمان الوطني', 'O-Cash', 'الأمانة العامة للركابية', '7654321', '0912345679', 'يرجى إدخال رقم العملية وتاريخ التحويل بدقة', 2),
-  ('فوري - الفيصل الإسلامي', 'Fawry', 'صندوق التكافل الركابي', '9876543', '0912345680', 'إرفاق صورة الإشعار إجباري للمراجعة المالية', 3)
+  ('بنكك - بنك الخرطوم', 'Bankak', 'منصة السادة الركابية الرقمية', 'حساب رسمي معتمد', 'تواصل عبر الأمانة العامة', 'يرجى تحويل المبلغ عبر الحساب المعتمد ورفع إشعار التحويل', 1),
+  ('أوكاش - بنك أمدرمان الوطني', 'O-Cash', 'الأمانة العامة للركابية', 'حساب رسمي معتمد', 'تواصل عبر الأمانة العامة', 'يرجى إدخال مرجع عملية التحويل بدقة', 2),
+  ('فوري - الفيصل الإسلامي', 'Fawry', 'صندوق التكافل الركابي', 'حساب رسمي معتمد', 'تواصل عبر الأمانة العامة', 'إرفاق صورة الإشعار إجباري للمراجعة المالية', 3)
 ON CONFLICT DO NOTHING;
 
 -- 3. Departments
@@ -37,7 +37,7 @@ VALUES
   ('legal', 'الدائرة القانونية', 'الاستشارات القانونية واللوائح التنظيمية'),
   ('investments', 'دائرة المشاريع والاستثمار', 'إدارة الشبكة الاقتصادية والمشاريع التنموية'),
   ('expatriates', 'دائرة المغتربين', 'ربط أبناء الركابية بالخارج بالمبادرات الوطنية')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- 4. Roles
 INSERT INTO public.roles (code, name_ar, description)
@@ -51,4 +51,4 @@ VALUES
   ('genealogy_manager', 'مسؤول النسب والتوثيق', 'توثيق وتعديل شجرة النسب والعائلات'),
   ('media_manager', 'المسؤول الإعلامي', 'نشر الأخبار، البيانات، والوسائط'),
   ('member', 'عضو مسجل', 'صلاحيات العضوية العادية وتصفح الواجهات الخاصة')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT DO NOTHING;

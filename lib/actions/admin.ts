@@ -15,6 +15,7 @@ export interface AdminMetrics {
 
 /**
  * Server-side helper to strictly verify caller has administrative session & permissions.
+ * STRICT SECURITY: Rely ONLY on user_roles table.
  */
 export async function verifyAdminUser() {
   const supabase = await createClient();
@@ -35,7 +36,7 @@ export async function verifyAdminUser() {
     ["super_admin", "secretary_general", "finance_manager", "executive_council"].includes(role)
   );
 
-  if (isAdmin || user.email?.endsWith("@rikabiya.org")) {
+  if (isAdmin) {
     return { authorized: true, user, roles };
   }
 
@@ -46,7 +47,6 @@ export async function getAdminMetricsAction(): Promise<AdminMetrics> {
   try {
     const authCheck = await verifyAdminUser();
     if (!authCheck.authorized) {
-      // Abort immediately if unauthorized
       return {
         totalMembers: 0,
         pendingMembers: 0,
