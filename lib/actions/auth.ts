@@ -13,11 +13,11 @@ export interface AuthResult {
 
 /**
  * Initial Administrator Provisioning Action
- * Uses env or secure defaults (default email: admin@rikabiya.org, default pass: 12345678)
+ * Strictly uses ADMIN_EMAIL env or requested email (mosabkry@gmail.com) with initial password 12345678.
  */
-export async function provisionInitialAdminAction(): Promise<AuthResult> {
+export async function provisionInitialAdminAction(customEmail?: string): Promise<AuthResult> {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@rikabiya.org";
+    const adminEmail = customEmail || process.env.ADMIN_EMAIL || "mosabkry@gmail.com";
     const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || "12345678";
 
     const supabaseAdmin = createAdminClient();
@@ -159,7 +159,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
 }
 
 /**
- * Real Supabase Auth SignIn Action with Auto-Provisioning for Admin Email
+ * Real Supabase Auth SignIn Action
  */
 export async function signInAction(formData: FormData): Promise<AuthResult> {
   try {
@@ -170,10 +170,10 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
       return { success: false, error: "يرجى إدخال البريد الإلكتروني وكلمة المرور." };
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@rikabiya.org";
-    if (email === adminEmail) {
-      // Provision admin if first time
-      await provisionInitialAdminAction();
+    const configuredAdminEmail = process.env.ADMIN_EMAIL || "mosabkry@gmail.com";
+    if (email === configuredAdminEmail) {
+      // Auto-provision admin account if needed
+      await provisionInitialAdminAction(email);
     }
 
     const supabase = await createClient();

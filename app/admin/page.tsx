@@ -238,13 +238,13 @@ export default function AdminDashboardPage() {
 
           <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
             <div>
-              <label className="block text-slate-300 mb-1 font-semibold">بريد المدير الإلكتروني (Default: admin@rikabiya.org)</label>
+              <label className="block text-slate-300 mb-1 font-semibold">البريد الإلكتروني للمدير</label>
               <input
                 name="email"
                 type="email"
                 required
-                defaultValue="admin@rikabiya.org"
-                placeholder="admin@rikabiya.org"
+                defaultValue="mosabkry@gmail.com"
+                placeholder="أدخل البريد الإلكتروني للمدير..."
                 className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
               />
             </div>
