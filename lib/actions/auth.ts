@@ -12,8 +12,7 @@ export interface AuthResult {
 }
 
 /**
- * Initial Administrator Provisioning Action
- * Strictly uses ADMIN_EMAIL env or requested email (mosabkry@gmail.com) with initial password 12345678.
+ * Initial Administrator Provisioning Action (Run during setup if admin does not exist)
  */
 export async function provisionInitialAdminAction(customEmail?: string): Promise<AuthResult> {
   try {
@@ -23,33 +22,40 @@ export async function provisionInitialAdminAction(customEmail?: string): Promise
     const supabaseAdmin = createAdminClient();
 
     // Check if super_admin role exists
-    const { data: superAdminRole } = await supabaseAdmin
+    let { data: superAdminRole } = await supabaseAdmin
       .from("roles")
       .select("id")
       .eq("code", "super_admin")
       .single();
 
     if (!superAdminRole) {
-      return { success: false, error: "دور المشرف العام (super_admin) غير موجود بجدول الأدوار." };
+      const { data: newRole } = await supabaseAdmin
+        .from("roles")
+        .insert({
+          code: "super_admin",
+          name_ar: "المشرف العام",
+          description: "صلاحيات كاملة لإدارة النظام والمنصة",
+        })
+        .select()
+        .single();
+      superAdminRole = newRole;
     }
 
-    // Try creating user or fetching existing
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: adminEmail,
-      password: adminPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: "المشرف العام - الأمانة العامة",
-      },
-    });
+    // Check if user already exists
+    const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+    let existingUser = usersList?.users?.find((u) => u.email === adminEmail);
 
-    let userId: string | null = authUser.user?.id || null;
+    let userId: string | null = existingUser?.id || null;
 
-    if (authError && authError.message.includes("already been registered")) {
-      const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = usersList.users.find((u) => u.email === adminEmail);
-      if (existingUser) {
-        userId = existingUser.id;
+    if (!existingUser) {
+      const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+        user_metadata: { full_name: "المشرف العام" },
+      });
+      if (!createErr && newUser?.user) {
+        userId = newUser.user.id;
       }
     }
 
@@ -65,10 +71,12 @@ export async function provisionInitialAdminAction(customEmail?: string): Promise
     });
 
     // Assign super_admin role
-    await supabaseAdmin.from("user_roles").upsert({
-      user_id: userId,
-      role_id: superAdminRole.id,
-    });
+    if (superAdminRole) {
+      await supabaseAdmin.from("user_roles").upsert({
+        user_id: userId,
+        role_id: superAdminRole.id,
+      });
+    }
 
     return {
       success: true,
@@ -160,6 +168,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
 
 /**
  * Real Supabase Auth SignIn Action
+ * Strictly uses Supabase Auth credentials without overwriting passwords.
  */
 export async function signInAction(formData: FormData): Promise<AuthResult> {
   try {
@@ -170,9 +179,9 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
       return { success: false, error: "يرجى إدخال البريد الإلكتروني وكلمة المرور." };
     }
 
+    // Auto-provision initial admin account on first setup attempt if it doesn't exist yet
     const configuredAdminEmail = process.env.ADMIN_EMAIL || "mosabkry@gmail.com";
     if (email === configuredAdminEmail) {
-      // Auto-provision admin account if needed
       await provisionInitialAdminAction(email);
     }
 
