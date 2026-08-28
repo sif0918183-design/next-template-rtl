@@ -119,6 +119,23 @@ export async function getAdminMetricsAction(): Promise<AdminMetrics> {
   }
 }
 
+export async function getAllMembersAdminAction() {
+  try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) return [];
+
+    const supabaseAdmin = createAdminClient();
+    const { data: members } = await supabaseAdmin
+      .from("members")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    return members || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getPendingPaymentsAction() {
   try {
     const authCheck = await verifyAdminUser();

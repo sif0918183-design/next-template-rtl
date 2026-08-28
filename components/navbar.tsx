@@ -138,12 +138,13 @@ export function Navbar() {
                 <Settings className="w-5 h-5" />
               </Link>
 
-              {/* Login Button */}
+              {/* Member Dashboard / Login Button */}
               <Link
-                href="/login"
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-secondary text-secondary-foreground hover:bg-accent hover:text-foreground transition-all duration-200 border border-amber-500/20 shadow-xs"
+                href="/profile"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:from-amber-400 hover:to-amber-500 transition-all duration-200 shadow-sm flex items-center gap-1.5"
               >
-                بوابة الدخول
+                <User className="w-4 h-4 shrink-0" />
+                <span>لوحة العضوية</span>
               </Link>
 
               {/* Mobile Menu Trigger */}

@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [showConfirmationNotice, setShowConfirmationNotice] = useState(false);
+  const [userRegisteredEmail, setUserRegisteredEmail] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -37,13 +39,13 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     const formData = new FormData(e.currentTarget);
+    const emailVal = formData.get("email") as string;
+    setUserRegisteredEmail(emailVal);
+
     startTransition(async () => {
       const res = await signUpAction(formData);
       if (res.success) {
-        setSuccessMsg(res.message || "تم إنشاء الحساب بنجاح!");
-        setTimeout(() => {
-          setActiveTab("login");
-        }, 1500);
+        setShowConfirmationNotice(true);
       } else {
         setErrorMsg(res.error || "فشل إنشاء الحساب.");
       }
@@ -62,7 +64,40 @@ export default function LoginPage() {
           <p className="text-xs text-slate-400">منصة السادة الركابية الرقمية - جمهورية السودان</p>
         </div>
 
-        {/* Auth Tabs */}
+        {/* Email Confirmation Stage 1 Notice */}
+        {showConfirmationNotice ? (
+          <div className="p-5 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-900 border border-emerald-400 mx-auto flex items-center justify-center text-amber-400">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-emerald-300">تم إنشاء حسابك بنجاح 🎉</h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                أرسلنا رسالة تأكيد إلى بريدك الإلكتروني (<span className="font-mono text-amber-400">{userRegisteredEmail}</span>). يرجى فتح البريد والضغط على رابط التفعيل، ثم العودة لتسجيل الدخول وإكمال ملف العضوية.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  alert(`تم إعادة إرسال رابط التفعيل إلى ${userRegisteredEmail}`);
+                }}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-xs border border-amber-500/30 transition-colors"
+              >
+                إعادة إرسال رسالة التأكيد 📩
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmationNotice(false);
+                  setActiveTab("login");
+                }}
+                className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-colors"
+              >
+                الانتقال لتسجيل الدخول ←
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-bold">
           <button
             onClick={() => { setActiveTab("login"); setErrorMsg(""); setSuccessMsg(""); }}
@@ -212,6 +247,8 @@ export default function LoginPage() {
               {isPending ? "جاري إنشاء الحساب..." : "إنشاء حساب ومستند عضوية جديد"}
             </button>
           </form>
+        )}
+          </>
         )}
       </div>
     </div>

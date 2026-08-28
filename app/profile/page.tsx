@@ -64,12 +64,20 @@ export default async function ProfilePage() {
               </div>
             </div>
 
-            <Link
-              href="/profile/complete"
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors self-start sm:self-auto"
-            >
-              تعديل واستكمال الملف ({completionPct}%) ←
-            </Link>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-colors"
+              >
+                تصفح المنصة الشاملة 🌐
+              </Link>
+              <Link
+                href="/profile/complete"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors"
+              >
+                تعديل واستكمال الملف ({completionPct}%) ←
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">

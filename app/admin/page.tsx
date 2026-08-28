@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import { getAdminMetricsAction, getPendingPaymentsAction, AdminMetrics } from "@/lib/actions/admin";
+import { getAdminMetricsAction, getPendingPaymentsAction, getAllMembersAdminAction, AdminMetrics } from "@/lib/actions/admin";
 import { reviewPaymentReceiptAction, getReceiptSignedUrlAction } from "@/lib/actions/payments";
 import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
 import { getCurrentUserAction, signInAction, changeAdminPasswordAction } from "@/lib/actions/auth";
@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families" | "plans" | "cards" | "security">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "members" | "payments" | "news" | "media" | "leadership" | "families" | "plans" | "cards" | "security">("overview");
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
@@ -22,6 +22,7 @@ export default function AdminDashboardPage() {
   const [mediaList, setMediaList] = useState<any[]>([]);
   const [leadershipList, setLeadershipList] = useState<any[]>([]);
   const [familiesList, setFamiliesList] = useState<any[]>([]);
+  const [membersList, setMembersList] = useState<any[]>([]);
   const [cardRequests, setCardRequests] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [goalData, setGoalData] = useState<any>(null);
@@ -56,6 +57,7 @@ export default function AdminDashboardPage() {
     const med = await getMediaAction();
     const l = await getLeadershipAction();
     const f = await getFamiliesAction();
+    const mems = await getAllMembersAdminAction();
     const cr = await getAdminPhysicalCardRequestsAction();
     const pl = await getMembershipPlansAction();
     const g = await getMonthlyMembershipGoalAction();
@@ -66,6 +68,7 @@ export default function AdminDashboardPage() {
     setMediaList(med);
     setLeadershipList(l);
     setFamiliesList(f);
+    setMembersList(mems);
     setCardRequests(cr);
     setPlans(pl);
     setGoalData(g);
@@ -360,6 +363,12 @@ export default function AdminDashboardPage() {
           <Users className="w-4 h-4" /> الإحصائيات العامة
         </button>
         <button
+          onClick={() => setActiveTab("members")}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "members" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <Users className="w-4 h-4" /> أعضاء المنصة ({membersList.length})
+        </button>
+        <button
           onClick={() => setActiveTab("payments")}
           className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "payments" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
@@ -408,6 +417,59 @@ export default function AdminDashboardPage() {
           <KeyRound className="w-4 h-4" /> كلمة المرور
         </button>
       </div>
+
+      {/* MEMBERS TAB */}
+      {activeTab === "members" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-400" />
+              سجل أعضاء السادة الركابية المحدث تلقائياً ({membersList.length})
+            </h2>
+          </div>
+
+          {membersList.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
+              لا يوجد أعضاء مسجلون بعد.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">اسم العضو</th>
+                    <th className="p-3">رقم الهاتف</th>
+                    <th className="p-3">الواتساب</th>
+                    <th className="p-3">الولاية / المحلية</th>
+                    <th className="p-3">الفرع والعائلة</th>
+                    <th className="p-3">المهنة والمؤهل</th>
+                    <th className="p-3">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {membersList.map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-800/30">
+                      <td className="p-3 font-bold text-slate-100">{m.full_name}</td>
+                      <td className="p-3 font-mono text-slate-300">{m.phone || "غير محدد"}</td>
+                      <td className="p-3 font-mono text-emerald-400">{m.whatsapp || "غير محدد"}</td>
+                      <td className="p-3">{m.state} - {m.locality}</td>
+                      <td className="p-3">{m.family || "-"} ({m.branch || "-"})</td>
+                      <td className="p-3">{m.occupation || "-"} / {m.education || "-"}</td>
+                      <td className="p-3">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+                          m.status === "active" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        }`}>
+                          {m.status === "active" ? "نشط" : "قيد المراجعة"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
