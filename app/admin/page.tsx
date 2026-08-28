@@ -5,14 +5,16 @@ import { getAdminMetricsAction, getPendingPaymentsAction, AdminMetrics } from "@
 import { reviewPaymentReceiptAction, getReceiptSignedUrlAction } from "@/lib/actions/payments";
 import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
 import { getCurrentUserAction, signInAction, changeAdminPasswordAction } from "@/lib/actions/auth";
-import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, KeyRound, AlertCircle } from "lucide-react";
+import { getAdminPhysicalCardRequestsAction, reviewPhysicalCardRequestAction } from "@/lib/actions/physical-cards";
+import { updateMembershipPlanAction, setMonthlyMembershipGoalAction, getMembershipPlansAction, getMonthlyMembershipGoalAction } from "@/lib/actions/membership";
+import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, KeyRound, AlertCircle, Award, Target } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families" | "security">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "news" | "media" | "leadership" | "families" | "plans" | "cards" | "security">("overview");
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
@@ -20,6 +22,9 @@ export default function AdminDashboardPage() {
   const [mediaList, setMediaList] = useState<any[]>([]);
   const [leadershipList, setLeadershipList] = useState<any[]>([]);
   const [familiesList, setFamiliesList] = useState<any[]>([]);
+  const [cardRequests, setCardRequests] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [goalData, setGoalData] = useState<any>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
@@ -51,6 +56,9 @@ export default function AdminDashboardPage() {
     const med = await getMediaAction();
     const l = await getLeadershipAction();
     const f = await getFamiliesAction();
+    const cr = await getAdminPhysicalCardRequestsAction();
+    const pl = await getMembershipPlansAction();
+    const g = await getMonthlyMembershipGoalAction();
 
     setMetrics(m);
     setPayments(p);
@@ -58,6 +66,9 @@ export default function AdminDashboardPage() {
     setMediaList(med);
     setLeadershipList(l);
     setFamiliesList(f);
+    setCardRequests(cr);
+    setPlans(pl);
+    setGoalData(g);
     setIsLoading(false);
   };
 
@@ -106,6 +117,47 @@ export default function AdminDashboardPage() {
         setActiveReceiptId(null);
         setRejectionReason("");
         setSelectedReceiptUrl(null);
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleReviewCard = (requestId: string, status: string) => {
+    startTransition(async () => {
+      const res = await reviewPhysicalCardRequestAction(requestId, status);
+      if (res.success) {
+        alert(res.message);
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleUpdatePlan = (planId: string, nameAr: string, priceSdg: number, isRecommended: boolean) => {
+    startTransition(async () => {
+      const res = await updateMembershipPlanAction(planId, nameAr, priceSdg, isRecommended);
+      if (res.success) {
+        alert(res.message);
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleSetGoal = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const targetCount = parseInt(formData.get("targetCount") as string, 10);
+    const description = formData.get("description") as string;
+
+    startTransition(async () => {
+      const res = await setMonthlyMembershipGoalAction(targetCount, description);
+      if (res.success) {
+        alert(res.message);
         loadAdminData();
       } else {
         alert(res.error);
@@ -303,45 +355,57 @@ export default function AdminDashboardPage() {
       <div className="flex flex-wrap gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "overview" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "overview" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <Users className="w-4 h-4" /> الإحصائيات العامة
         </button>
         <button
           onClick={() => setActiveTab("payments")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "payments" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "payments" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <CreditCard className="w-4 h-4" /> المراجعة المالية ({metrics?.pendingPaymentsCount || 0})
         </button>
         <button
+          onClick={() => setActiveTab("plans")}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "plans" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <Award className="w-4 h-4" /> خطط وأهداف العضوية
+        </button>
+        <button
+          onClick={() => setActiveTab("cards")}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "cards" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <CreditCard className="w-4 h-4" /> البطاقات المادية ({cardRequests.length})
+        </button>
+        <button
           onClick={() => setActiveTab("news")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "news" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "news" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <FileText className="w-4 h-4" /> الأخبار والبيانات ({newsList.length})
         </button>
         <button
           onClick={() => setActiveTab("media")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "media" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "media" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <ImageIcon className="w-4 h-4" /> معرض الوسائط ({mediaList.length})
         </button>
         <button
           onClick={() => setActiveTab("leadership")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "leadership" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "leadership" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <ShieldCheck className="w-4 h-4" /> الهيئة القيادية ({leadershipList.length})
         </button>
         <button
           onClick={() => setActiveTab("families")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "families" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "families" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <BookOpen className="w-4 h-4" /> سجل الأسر والنسب ({familiesList.length})
         </button>
         <button
           onClick={() => setActiveTab("security")}
-          className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "security" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "security" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
-          <KeyRound className="w-4 h-4" /> تغيير كلمة المرور
+          <KeyRound className="w-4 h-4" /> كلمة المرور
         </button>
       </div>
 
@@ -386,14 +450,127 @@ export default function AdminDashboardPage() {
 
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>طلبات التكافل الاجتماعي</span>
-              <HeartHandshake className="w-4 h-4 text-rose-400" />
+              <span>طلبات البطاقات المادية</span>
+              <Award className="w-4 h-4 text-rose-400" />
             </div>
             <div className="text-2xl font-mono font-bold text-rose-400">
-              {metrics ? metrics.socialRequestsCount : 0}
+              {cardRequests.length}
             </div>
-            <p className="text-[11px] text-slate-500">حالات مقدمة للدائرة الاجتماعية</p>
+            <p className="text-[11px] text-slate-500">مقدمة لاستخراج بطاقة بلاستيكية</p>
           </div>
+        </div>
+      )}
+
+      {/* PLANS & GOALS CMS TAB */}
+      {activeTab === "plans" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Target className="w-4 h-4" /> تعيين هدف العضوية الشهرية
+            </h3>
+            <form onSubmit={handleSetGoal} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1">العدد المستهدف من الأعضاء *</label>
+                <input name="targetCount" type="number" defaultValue={goalData?.targetMembersCount || 1000} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">وصف الهدف أو الشعار *</label>
+                <input name="description" defaultValue={goalData?.description || "هدفنا هذا الشهر لمواصلة الدعم والتكافل"} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+                تأكيد وحفظ الهدف
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">إدارة مستويات العضوية والاشتراكات ({plans.length})</h3>
+            <div className="space-y-3">
+              {plans.map((p) => (
+                <div key={p.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <div className="font-bold text-slate-100">{p.name_ar}</div>
+                    <div className="text-amber-400 font-mono font-bold mt-1">{Number(p.price_sdg).toLocaleString()} SDG / شهرياً</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newPrice = prompt(`أدخل السعر الشهري الجديد لخطة (${p.name_ar}):`, p.price_sdg);
+                      if (newPrice && !isNaN(parseFloat(newPrice))) {
+                        handleUpdatePlan(p.id, p.name_ar, parseFloat(newPrice), p.is_recommended);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg font-bold transition-colors self-start sm:self-auto"
+                  >
+                    تعديل السعر الشهري
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHYSICAL CARDS CMS TAB */}
+      {activeTab === "cards" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-400" />
+              طلبات استخراج بطاقات العضوية المادية ({cardRequests.length})
+            </h2>
+          </div>
+
+          {cardRequests.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
+              لا توجد طلبات بطاقات مادية حالياً في قاعدة البيانات.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">رقم الطلب</th>
+                    <th className="p-3">اسم العضو</th>
+                    <th className="p-3">رقم العضوية</th>
+                    <th className="p-3">الرسوم (SDG)</th>
+                    <th className="p-3">الحالة الحالية</th>
+                    <th className="p-3 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {cardRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-slate-800/30">
+                      <td className="p-3 font-mono font-bold text-amber-400">{req.request_number}</td>
+                      <td className="p-3 font-bold text-slate-100">{req.members?.full_name || "عضو مسجل"}</td>
+                      <td className="p-3 font-mono">{req.members?.membership_number}</td>
+                      <td className="p-3 font-mono font-bold text-emerald-400">{Number(req.fee_sdg).toLocaleString()}</td>
+                      <td className="p-3">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleReviewCard(req.id, "in_printing")}
+                            className="px-2.5 py-1 bg-blue-950 hover:bg-blue-900 border border-blue-500/40 text-blue-300 rounded-lg text-[10px]"
+                          >
+                            قيد الطباعة
+                          </button>
+                          <button
+                            onClick={() => handleReviewCard(req.id, "ready_for_pickup")}
+                            className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 rounded-lg text-[10px]"
+                          >
+                            جاهزة للتسليم
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
