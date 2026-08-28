@@ -20,6 +20,7 @@ export async function getNewsAction() {
     const { data } = await supabaseAdmin
       .from("news")
       .select("*")
+      .eq("status", "published")
       .order("created_at", { ascending: false });
 
     return data || [];

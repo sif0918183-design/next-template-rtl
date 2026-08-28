@@ -97,6 +97,127 @@ export async function getMembershipPlansAction() {
 /**
  * Update Membership Plan Price/Name (Admin Only)
  */
+export async function createMembershipPlanAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return { success: false, error: "غير مصرح لك بإنشاء خطط عضوية جديدة." };
+    }
+
+    const nameAr = formData.get("nameAr") as string;
+    const code = formData.get("code") as string || `tier_${Date.now().toString().slice(-4)}`;
+    const priceSdg = parseFloat(formData.get("priceSdg") as string || "0");
+    const description = formData.get("description") as string || "";
+    const isPaymentRequired = formData.get("isPaymentRequired") === "true";
+    const isRecommended = formData.get("isRecommended") === "true";
+
+    if (!nameAr) {
+      return { success: false, error: "يرجى إدخال اسم مستوى العضوية." };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin
+      .from("membership_plans")
+      .insert({
+        code,
+        name_ar: nameAr,
+        price_sdg: priceSdg,
+        description,
+        is_payment_required: isPaymentRequired,
+        is_recommended: isRecommended,
+        downgrade_months_grace_period: 2,
+      });
+
+    if (error) {
+      console.error("Create Plan Error:", error);
+      return { success: false, error: "حدث خطأ أثناء إضافة مستوى العضوية." };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/membership/select");
+    return { success: true, message: "تمت إضافة مستوى العضوية الجديد بنجاح!" };
+  } catch {
+    return { success: false, error: "حدث خطأ غير متوقع." };
+  }
+}
+
+export async function deleteMembershipPlanAction(planId: string): Promise<ActionResult> {
+  try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return { success: false, error: "غير مصرح لك بحذف مستويات العضوية." };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin
+      .from("membership_plans")
+      .delete()
+      .eq("id", planId);
+
+    if (error) {
+      return { success: false, error: "تعذر حذف الخطة لأنها مرتبطة بأعضاء مسجلين." };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/membership/select");
+    return { success: true, message: "تم حذف مستوى العضوية بنجاح." };
+  } catch {
+    return { success: false, error: "حدث خطأ أثناء الحذف." };
+  }
+}
+
+export async function selectUserMembershipPlanAction(planId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "يجب تسجيل الدخول لاختيار مستوى العضوية." };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { data: plan } = await supabaseAdmin
+      .from("membership_plans")
+      .select("*")
+      .eq("id", planId)
+      .single();
+
+    if (!plan) {
+      return { success: false, error: "مستوى العضوية المحدد غير موجود." };
+    }
+
+    // Update member record
+    const { data: member } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (member) {
+      await supabaseAdmin
+        .from("members")
+        .update({
+          plan_id: planId,
+          status: plan.price_sdg === 0 || !plan.is_payment_required ? "active" : "pending",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+    }
+
+    revalidatePath("/profile");
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      message: plan.price_sdg === 0 || !plan.is_payment_required
+        ? `تم اعتماد اختيارك لمستوى (${plan.name_ar}) بنجاح! الاشتراك الشهري غير إلزامي لهذا المستوى.`
+        : `تم اختيار مستوى (${plan.name_ar}). يرجى رفع إشعار التحويل المالي لتفعيل العضوية.`,
+    };
+  } catch {
+    return { success: false, error: "حدث خطأ أثناء اختيار مستوى العضوية." };
+  }
+}
+
 export async function updateMembershipPlanAction(
   planId: string,
   nameAr: string,

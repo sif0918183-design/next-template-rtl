@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import { Award, HeartHandshake, Check, Sparkles } from "lucide-react";
 import MembershipCheckoutModal from "@/components/membership-checkout-modal";
+import { selectUserMembershipPlanAction } from "@/lib/actions/membership";
+import { useRouter } from "next/navigation";
 
 interface MembershipSelectClientProps {
   plans: any[];
@@ -15,7 +17,21 @@ export default function MembershipSelectClient({
   goal,
   bankMethods,
 }: MembershipSelectClientProps) {
+  const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSelectFreePlan = (planId: string) => {
+    startTransition(async () => {
+      const res = await selectUserMembershipPlanAction(planId);
+      if (res.success) {
+        alert(res.message);
+        router.push("/profile");
+      } else {
+        alert(res.error);
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white dir-rtl py-12 px-4 sm:px-6 lg:px-8 space-y-12">
@@ -52,9 +68,19 @@ export default function MembershipSelectClient({
       </div>
 
       {/* Plans Selection Grid */}
+      {plans.length === 0 ? (
+        <div className="max-w-2xl mx-auto p-8 rounded-2xl bg-slate-900 border border-dashed border-slate-800 text-center space-y-3">
+          <Award className="w-10 h-10 text-amber-400 mx-auto opacity-50" />
+          <h3 className="text-base font-bold text-slate-200">لا توجد مستويات عضوية معرفة حالياً في قاعدة البيانات</h3>
+          <p className="text-xs text-slate-400">
+            يمكن للمدير إضافة مستويات العضوية وتحديد أسعارها واشتراكاتها من لوحة الإدارة.
+          </p>
+        </div>
+      ) : (
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((p: any) => {
           const isRecommended = p.is_recommended || p.code === "supporting";
+          const isFree = Number(p.price_sdg) === 0 || p.is_payment_required === false;
           const featuresList = typeof p.features === "string" ? JSON.parse(p.features) : (p.features || []);
 
           return (
@@ -85,6 +111,11 @@ export default function MembershipSelectClient({
                     {Number(p.price_sdg).toLocaleString()}
                   </span>
                   <span className="text-xs text-slate-400 font-semibold mr-1.5">جنيه سوداني / شهرياً</span>
+                  {isFree && (
+                    <span className="block text-[11px] text-emerald-400 font-semibold mt-1">
+                      ✨ دفع الاشتراك الشهري في هذا المستوى غير إلزامي
+                    </span>
+                  )}
                 </div>
 
                 {/* Features List */}
@@ -101,24 +132,36 @@ export default function MembershipSelectClient({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedPlan(p)}
-                className={`w-full py-3 rounded-xl font-bold text-xs text-center transition-colors block ${
-                  isRecommended
-                    ? "bg-amber-500 hover:bg-amber-400 text-slate-950"
-                    : "bg-slate-800 hover:bg-slate-700 text-slate-200"
-                }`}
-              >
-                اختيار ورفع إشعار الدفع ←
-              </button>
+              {isFree ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleSelectFreePlan(p.id)}
+                  className="w-full py-3 rounded-xl font-bold text-xs text-center transition-colors bg-emerald-600 hover:bg-emerald-500 text-white block"
+                >
+                  {isPending ? "جاري الاعتماد..." : "اختيار المستوى الأول (غير إلزامي الدفع) ←"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan(p)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs text-center transition-colors block ${
+                    isRecommended
+                      ? "bg-amber-500 hover:bg-amber-400 text-slate-950"
+                      : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                  }`}
+                >
+                  اختيار ورفع إشعار الدفع ←
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+      )}
 
       <div className="max-w-2xl mx-auto p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 text-center leading-relaxed">
-        💡 الزيادة في مستويات العضوية الأعلى مساهمات طوعية واختيارية لدعم خطط الأمانة العامة في التوسع والخدمات المجتمعية.
+        💡 تنبيه السياسة المالية: دفع الاشتراك الشهري غير إلزامي في المستوى الأول. أما بقية المستويات المدفوعة، في حال عدم سداد الاشتراك لمدة <span className="text-amber-400 font-bold">شهرين متتاليين</span> يتم تحويل العضو تلقائياً للمستوى الأدنى. تأكيد واعتماد كافة عمليات الدفع يتم حصراً عبر لوحة الإدارة.
       </div>
 
       {/* Checkout Modal */}

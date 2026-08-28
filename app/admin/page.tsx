@@ -6,7 +6,7 @@ import { reviewPaymentReceiptAction, getReceiptSignedUrlAction, getPaymentMethod
 import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
 import { getCurrentUserAction, signInAction, changeAdminPasswordAction } from "@/lib/actions/auth";
 import { getAdminPhysicalCardRequestsAction, reviewPhysicalCardRequestAction } from "@/lib/actions/physical-cards";
-import { updateMembershipPlanAction, setMonthlyMembershipGoalAction, getMembershipPlansAction, getMonthlyMembershipGoalAction } from "@/lib/actions/membership";
+import { updateMembershipPlanAction, setMonthlyMembershipGoalAction, getMembershipPlansAction, getMonthlyMembershipGoalAction, createMembershipPlanAction, deleteMembershipPlanAction } from "@/lib/actions/membership";
 import { ShieldAlert, Users, CreditCard, HeartHandshake, RefreshCw, CheckCircle2, XCircle, Eye, Lock, FileText, Image as ImageIcon, BookOpen, Plus, Trash2, ShieldCheck, KeyRound, AlertCircle, Award, Target } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -148,6 +148,34 @@ export default function AdminDashboardPage() {
   const handleReviewCard = (requestId: string, status: string) => {
     startTransition(async () => {
       const res = await reviewPhysicalCardRequestAction(requestId, status);
+      if (res.success) {
+        alert(res.message);
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleCreatePlan = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await createMembershipPlanAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
+      }
+    });
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    if (!confirm("هل أنت تأكد من حذف مستوى العضوية هذا؟")) return;
+    startTransition(async () => {
+      const res = await deleteMembershipPlanAction(planId);
       if (res.success) {
         alert(res.message);
         loadAdminData();
@@ -550,45 +578,106 @@ export default function AdminDashboardPage() {
       {/* PLANS & GOALS CMS TAB */}
       {activeTab === "plans" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
-              <Target className="w-4 h-4" /> تعيين هدف العضوية الشهرية
-            </h3>
-            <form onSubmit={handleSetGoal} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-300 mb-1">العدد المستهدف من الأعضاء *</label>
-                <input name="targetCount" type="number" defaultValue={goalData?.targetMembersCount || 1000} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold" />
-              </div>
-              <div>
-                <label className="block text-slate-300 mb-1">وصف الهدف أو الشعار *</label>
-                <input name="description" defaultValue={goalData?.description || "هدفنا هذا الشهر لمواصلة الدعم والتكافل"} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
-              </div>
-              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
-                تأكيد وحفظ الهدف
-              </button>
-            </form>
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> إضافة مستوى عضوية جديد
+              </h3>
+              <form onSubmit={handleCreatePlan} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">اسم مستوى العضوية *</label>
+                  <input name="nameAr" required placeholder="مثال: العضوية الماسية / الشرفية..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">المبلغ الشهري (SDG) - (0 للمستوى المجاني غير الإلزامي) *</label>
+                  <input name="priceSdg" type="number" min="0" required defaultValue={0} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">الوصف والمميزات</label>
+                  <input name="description" placeholder="وصف موجز للمستوى..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <input type="checkbox" id="isPaymentRequired" name="isPaymentRequired" value="true" className="w-4 h-4 rounded border-slate-800 bg-slate-950" />
+                  <label htmlFor="isPaymentRequired" className="text-slate-300">الدفع إلزامي شهرياً لتفعيل المستوى</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="isRecommended" name="isRecommended" value="true" className="w-4 h-4 rounded border-slate-800 bg-slate-950" />
+                  <label htmlFor="isRecommended" className="text-slate-300">تمييز كمستوى موصى به</label>
+                </div>
+                <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-colors">
+                  إضافة مستوى العضوية
+                </button>
+              </form>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                <Target className="w-4 h-4" /> تعيين هدف العضوية الشهرية
+              </h3>
+              <form onSubmit={handleSetGoal} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 mb-1">العدد المستهدف من الأعضاء *</label>
+                  <input name="targetCount" type="number" defaultValue={goalData?.targetMembersCount || 1000} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1">وصف الهدف أو الشعار *</label>
+                  <input name="description" defaultValue={goalData?.description || "هدفنا هذا الشهر لمواصلة الدعم والتكافل"} required className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+                </div>
+                <button disabled={isPending} type="submit" className="w-full py-2.5 bg-emerald-500 text-slate-950 font-bold rounded-xl">
+                  تأكيد وحفظ الهدف
+                </button>
+              </form>
+            </div>
           </div>
 
           <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-100">إدارة مستويات العضوية والاشتراكات ({plans.length})</h3>
+            <h3 className="text-sm font-bold text-slate-100">إدارة مستويات العضوية والاشتراكات المعتمدة ({plans.length})</h3>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              💡 ملاحظة سياسة العضوية: المستوى الأول (0 SDG) غير إلزامي في الدفع. بقية المستويات تتطلب اشتراكاً شهرياً معتمداً، وفي حال عدم الدفع لمدة <span className="text-amber-400 font-bold">شهرين متتاليين</span> يتم تحويل العضو تلقائياً للمستوى الأدنى.
+            </p>
             <div className="space-y-3">
               {plans.map((p) => (
                 <div key={p.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div>
-                    <div className="font-bold text-slate-100">{p.name_ar}</div>
-                    <div className="text-amber-400 font-mono font-bold mt-1">{Number(p.price_sdg).toLocaleString()} SDG / شهرياً</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-100 text-sm">{p.name_ar}</span>
+                      {p.price_sdg === 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                          غير إلزامي الدفع
+                        </span>
+                      )}
+                      {p.is_recommended && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                          موصى به
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-amber-400 font-mono font-bold mt-1 text-sm">
+                      {Number(p.price_sdg).toLocaleString()} SDG / شهرياً
+                    </div>
+                    {p.description && <p className="text-[11px] text-slate-400 mt-1">{p.description}</p>}
                   </div>
-                  <button
-                    onClick={() => {
-                      const newPrice = prompt(`أدخل السعر الشهري الجديد لخطة (${p.name_ar}):`, p.price_sdg);
-                      if (newPrice && !isNaN(parseFloat(newPrice))) {
-                        handleUpdatePlan(p.id, p.name_ar, parseFloat(newPrice), p.is_recommended);
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg font-bold transition-colors self-start sm:self-auto"
-                  >
-                    تعديل السعر الشهري
-                  </button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      onClick={() => {
+                        const newPrice = prompt(`أدخل السعر الشهري الجديد لخطة (${p.name_ar}):`, p.price_sdg);
+                        if (newPrice !== null && !isNaN(parseFloat(newPrice))) {
+                          handleUpdatePlan(p.id, p.name_ar, parseFloat(newPrice), p.is_recommended);
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg font-bold transition-colors"
+                    >
+                      تعديل السعر
+                    </button>
+                    {p.code !== "basic" && (
+                      <button
+                        onClick={() => handleDeletePlan(p.id)}
+                        className="p-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
