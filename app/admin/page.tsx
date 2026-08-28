@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useTransition } from "react";
 import { getAdminMetricsAction, getPendingPaymentsAction, getAllMembersAdminAction, AdminMetrics } from "@/lib/actions/admin";
-import { reviewPaymentReceiptAction, getReceiptSignedUrlAction } from "@/lib/actions/payments";
+import { reviewPaymentReceiptAction, getReceiptSignedUrlAction, getPaymentMethodsAction, savePaymentMethodAction } from "@/lib/actions/payments";
 import { getNewsAction, saveNewsAction, deleteNewsAction, getMediaAction, saveMediaAction, deleteMediaAction, getLeadershipAction, saveLeadershipAction, deleteLeadershipAction, getFamiliesAction, saveFamilyAction } from "@/lib/actions/cms";
 import { getCurrentUserAction, signInAction, changeAdminPasswordAction } from "@/lib/actions/auth";
 import { getAdminPhysicalCardRequestsAction, reviewPhysicalCardRequestAction } from "@/lib/actions/physical-cards";
@@ -14,10 +14,11 @@ export default function AdminDashboardPage() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"overview" | "members" | "payments" | "news" | "media" | "leadership" | "families" | "plans" | "cards" | "security">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "members" | "payments" | "banks" | "news" | "media" | "leadership" | "families" | "plans" | "cards" | "security">("overview");
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [bankMethods, setBankMethods] = useState<any[]>([]);
   const [newsList, setNewsList] = useState<any[]>([]);
   const [mediaList, setMediaList] = useState<any[]>([]);
   const [leadershipList, setLeadershipList] = useState<any[]>([]);
@@ -53,6 +54,7 @@ export default function AdminDashboardPage() {
     setIsLoading(true);
     const m = await getAdminMetricsAction();
     const p = await getPendingPaymentsAction();
+    const bm = await getPaymentMethodsAction();
     const n = await getNewsAction();
     const med = await getMediaAction();
     const l = await getLeadershipAction();
@@ -64,6 +66,7 @@ export default function AdminDashboardPage() {
 
     setMetrics(m);
     setPayments(p);
+    setBankMethods(bm);
     setNewsList(n);
     setMediaList(med);
     setLeadershipList(l);
@@ -92,6 +95,21 @@ export default function AdminDashboardPage() {
         await checkAuth();
       } else {
         setLoginError(res.error || "فشل تسجيل الدخول كمدير للنظام.");
+      }
+    });
+  };
+
+  const handleSaveBankMethod = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await savePaymentMethodAction(formData);
+      if (res.success) {
+        alert(res.message);
+        (e.target as HTMLFormElement).reset();
+        loadAdminData();
+      } else {
+        alert(res.error);
       }
     });
   };
@@ -373,6 +391,12 @@ export default function AdminDashboardPage() {
           className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "payments" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
         >
           <CreditCard className="w-4 h-4" /> المراجعة المالية ({metrics?.pendingPaymentsCount || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab("banks")}
+          className={`px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === "banks" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"}`}
+        >
+          <CreditCard className="w-4 h-4" /> الحسابات البنكية ({bankMethods.length})
         </button>
         <button
           onClick={() => setActiveTab("plans")}
@@ -679,6 +703,56 @@ export default function AdminDashboardPage() {
               تأكيد وحفظ كلمة المرور الجديدة
             </button>
           </form>
+        </div>
+      )}
+
+      {/* BANK ACCOUNTS TAB */}
+      {activeTab === "banks" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> إضافة حساب بنكي للمساهمات
+            </h3>
+            <form onSubmit={handleSaveBankMethod} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">اسم البنك / المزود *</label>
+                <input name="provider" required placeholder="مثال: بنك الخرطوم (بنكك)" className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">اسم صاحب الحساب المعني *</label>
+                <input name="accountName" required placeholder="اسم الحساب..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">رقم الحساب البنكي / رقم التحويل *</label>
+                <input name="accountNumber" required placeholder="رقم الحساب..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono" />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">تعليمات التحويل (اختياري)</label>
+                <input name="instructions" placeholder="تعليمات إضافية للمتبرع..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white" />
+              </div>
+              <button disabled={isPending} type="submit" className="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+                إضافة الحساب فوراً
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">الحسابات البنكية المعتمدة حالياً ({bankMethods.length})</h3>
+            {bankMethods.length === 0 ? (
+              <p className="text-xs text-slate-500">لا توجد حسابات بنكية مضافة حالياً في قاعدة البيانات.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {bankMethods.map((b) => (
+                  <div key={b.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5 text-xs">
+                    <div className="font-bold text-amber-400 text-sm">{b.provider || b.name}</div>
+                    <div className="text-slate-200">صاحب الحساب: <span className="font-semibold text-slate-100">{b.account_name}</span></div>
+                    <div className="text-emerald-400 font-mono font-bold text-sm">{b.account_number}</div>
+                    {b.instructions && <div className="text-[10px] text-slate-400">{b.instructions}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

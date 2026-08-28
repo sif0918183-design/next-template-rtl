@@ -81,16 +81,6 @@ export default function DonatePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-slate-300 mb-1 font-semibold">رقم العملية / مرجع التحويل المالي *</label>
-              <input
-                name="transactionRef"
-                type="text"
-                required
-                placeholder="أدخل رقم عملية التحويل..."
-                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400 font-mono"
-              />
-            </div>
 
             <div>
               <label className="block text-slate-300 mb-1 font-semibold">صورة إشعار التحويل (JPG, PNG, WEBP) *</label>

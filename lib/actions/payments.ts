@@ -15,6 +15,59 @@ export interface ActionResult<T = unknown> {
  * Validates and submits a new payment receipt for membership or donation.
  * Uploads file to private storage bucket 'payment-receipts' and creates receipt record.
  */
+export async function getPaymentMethodsAction() {
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { data: methods } = await supabaseAdmin
+      .from("payment_methods")
+      .select("*")
+      .order("sort_order", { ascending: true });
+
+    return methods || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function savePaymentMethodAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const authCheck = await verifyAdminUser();
+    if (!authCheck.authorized) {
+      return { success: false, error: "غير مصرح لك بإدارة الحسابات البنكية." };
+    }
+
+    const provider = formData.get("provider") as string;
+    const accountName = formData.get("accountName") as string;
+    const accountNumber = formData.get("accountNumber") as string;
+    const instructions = formData.get("instructions") as string || "";
+
+    if (!provider || !accountName || !accountNumber) {
+      return { success: false, error: "يرجى ملء جميع البيانات الأساسية (اسم البنك، اسم صاحب الحساب، ورقم الحساب)." };
+    }
+
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin.from("payment_methods").insert({
+      name: provider,
+      provider,
+      account_name: accountName,
+      account_number: accountNumber,
+      instructions,
+      is_active: true,
+    });
+
+    if (error) {
+      return { success: false, error: "حدث خطأ أثناء حفظ الحساب البنكي." };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/donate");
+    revalidatePath("/membership/select");
+    return { success: true, message: "تمت إضافة الحساب البنكي بنجاح!" };
+  } catch {
+    return { success: false, error: "حدث خطأ أثناء الإضافة." };
+  }
+}
+
 export async function submitPaymentReceiptAction(formData: FormData): Promise<ActionResult> {
   try {
     const supabaseAdmin = createAdminClient();
@@ -23,7 +76,7 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
     const amountStr = formData.get("amount") as string;
     const amount = parseFloat(amountStr);
     const paymentMethodId = formData.get("paymentMethodId") as string;
-    const transactionRef = formData.get("transactionRef") as string;
+    let transactionRef = (formData.get("transactionRef") as string || "").trim();
     const notes = formData.get("notes") as string || "";
     const memberId = formData.get("memberId") as string || null;
     const userId = formData.get("userId") as string || null;
@@ -34,8 +87,9 @@ export async function submitPaymentReceiptAction(formData: FormData): Promise<Ac
       return { success: false, error: "قيمة المبلغ الدفوع يجب أن تكون أكبر من الصفر." };
     }
 
-    if (!transactionRef || transactionRef.trim().length < 3) {
-      return { success: false, error: "يرجى إدخال رقم العملية / مرجع التحويل بشكل صحيح." };
+    // Auto-generate transaction reference if empty (for simplified receipt image upload)
+    if (!transactionRef) {
+      transactionRef = `REF-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     }
 
     if (!file || file.size === 0) {
