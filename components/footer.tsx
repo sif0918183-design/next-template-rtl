@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Mail, Phone, MapPin, Shield, Heart } from "lucide-react";
+import { Mail, Phone, MapPin, Heart } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -48,7 +48,7 @@ export function Footer() {
               <li><Link href="/genealogy" className="text-emerald-200 hover:text-white transition-colors">شجرة الأنساب التفاعلية</Link></li>
               <li><Link href="/directory" className="text-emerald-200 hover:text-white transition-colors">دليل الأسر والفروع</Link></li>
               <li><Link href="/database" className="text-emerald-200 hover:text-white transition-colors">قاعدة البيانات الرقمية</Link></li>
-              <li><Link href="/admin" className="text-amber-400 hover:text-white transition-colors font-bold">لوحة الإدارة والتحكم ⚙️</Link></li>
+              <li><Link href="/financial-transparency" className="text-emerald-200 hover:text-white transition-colors">الشفافية المالية</Link></li>
             </ul>
           </div>
 
@@ -93,11 +93,6 @@ export function Footer() {
             <span className="text-white font-extrabold">المنصة الرقمية الرسمية للسادة الركابية</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="hover:text-white transition-colors flex items-center gap-1 text-amber-400">
-              <Shield className="w-3.5 h-3.5" />
-              <span>الإدارة المركزية للموقع</span>
-            </Link>
-            <span>|</span>
             <Link href="/contact" className="hover:text-white transition-colors flex items-center gap-1">
               <Heart className="w-3.5 h-3.5 text-amber-400" />
               <span>شروط الاستخدام</span>

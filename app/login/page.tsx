@@ -1,171 +1,256 @@
 "use client";
 
-import React, { useState } from "react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Phone, Mail, ShieldAlert, CheckCircle, ArrowRight, Smartphone } from "lucide-react";
-import Link from "next/link";
+import React, { useState, useTransition } from "react";
+import { signInAction, signUpAction } from "@/lib/actions/auth";
+import { useRouter } from "next/navigation";
+import { Shield, UserPlus, LogIn, CheckCircle2, AlertCircle } from "lucide-react";
 
-export default function Login() {
-  const [method, setMethod] = useState<"phone" | "email" | "nationalId">("phone");
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState("");
+export default function LoginPage() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [showConfirmationNotice, setShowConfirmationNotice] = useState(false);
+  const [userRegisteredEmail, setUserRegisteredEmail] = useState("");
+  const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError("");
+    setErrorMsg("");
+    setSuccessMsg("");
 
-    if (!identifier || !password) {
-      setError("الرجاء إدخال الحقلين لإكمال عملية التحقق.");
-      return;
-    }
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await signInAction(formData);
+      if (res.success) {
+        setSuccessMsg("تم تسجيل الدخول بنجاح! جاري تحويلك...");
+        setTimeout(() => {
+          router.push("/profile");
+        }, 1000);
+      } else {
+        setErrorMsg(res.error || "فشل تسجيل الدخول.");
+      }
+    });
+  };
 
-    // Simple simulated authentication success
-    setIsSuccess(true);
+  const handleSignUpSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const formData = new FormData(e.currentTarget);
+    const emailVal = formData.get("email") as string;
+    setUserRegisteredEmail(emailVal);
+
+    startTransition(async () => {
+      const res = await signUpAction(formData);
+      if (res.success) {
+        setShowConfirmationNotice(true);
+      } else {
+        setErrorMsg(res.error || "فشل إنشاء الحساب.");
+      }
+    });
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-16 flex items-center justify-center">
-        <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full text-right space-y-6 relative overflow-hidden">
-          {/* Top visual accent */}
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-800 via-amber-400 to-emerald-800" />
-
-          {/* Logo badge */}
-          <div className="flex flex-col items-center text-center space-y-2">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-amber-400 flex items-center justify-center text-primary font-extrabold text-xl shadow-md">
-              ر
-            </div>
-            <h2 className="text-xl font-extrabold text-foreground">تسجيل الدخول للمنصة الرقمية</h2>
-            <p className="text-xs text-muted-foreground font-semibold max-w-[280px]">
-              ادخل حسابك لمشاهدة بطاقتك الرقمية الرسمية وتعديل بيانات شجرة نسب عائلتك.
-            </p>
+    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 dir-rtl">
+      <div className="max-w-md w-full bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-500/40 mx-auto flex items-center justify-center text-amber-400">
+            <Shield className="w-7 h-7" />
           </div>
-
-          {isSuccess ? (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-xl space-y-4 text-center">
-              <div className="flex justify-center text-emerald-600 dark:text-emerald-400">
-                <CheckCircle className="w-12 h-12 animate-bounce" />
-              </div>
-              <h3 className="font-extrabold text-foreground text-base">تم التحقق بنجاح</h3>
-              <p className="text-xs text-muted-foreground font-semibold">
-                مرحباً بك مجدداً في الديوان الرقمي للسادة الركابية. يمكنك الآن تصفح كافة الصلاحيات والبيانات الحساسة.
-              </p>
-              <Link
-                href="/profile"
-                className="inline-block px-5 py-2.5 bg-primary hover:bg-emerald-800 text-primary-foreground rounded-lg text-xs font-bold transition-all w-full"
-              >
-                الانتقال للملف الشخصي والبطاقة الرقمية
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Login Method Tabs */}
-              <div className="grid grid-cols-3 gap-2 bg-muted p-1 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => { setMethod("phone"); setIdentifier(""); }}
-                  className={`py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all ${
-                    method === "phone"
-                      ? "bg-background text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  رقم الهاتف
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMethod("email"); setIdentifier(""); }}
-                  className={`py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all ${
-                    method === "email"
-                      ? "bg-background text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  البريد الإلكتروني
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMethod("nationalId"); setIdentifier(""); }}
-                  className={`py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all ${
-                    method === "nationalId"
-                      ? "bg-background text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  الرقم الوطني
-                </button>
-              </div>
-
-              {/* Dynamic Input Placeholder */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-foreground">
-                  {method === "phone" && "رقم الهاتف المحمول (مع رمز الدولة)"}
-                  {method === "email" && "عنوان البريد الإلكتروني"}
-                  {method === "nationalId" && "الرقم الوطني المكون من 11 رقم"}
-                </label>
-                <input
-                  type={method === "email" ? "email" : "text"}
-                  required
-                  placeholder={
-                    method === "phone"
-                      ? "مثال: 249912345678"
-                      : method === "email"
-                      ? "example@alrikabiyyah.org"
-                      : "101XXXXXXXX"
-                  }
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border bg-background text-foreground text-sm font-semibold focus:ring-1 focus:ring-primary outline-hidden"
-                />
-              </div>
-
-              {/* Password Input */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-foreground">كلمة المرور / الرمز السري</label>
-                  <a href="#" className="text-[10px] text-primary hover:underline font-semibold">هل نسيت كلمة المرور؟</a>
-                </div>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border bg-background text-foreground text-sm font-semibold focus:ring-1 focus:ring-primary outline-hidden"
-                />
-              </div>
-
-              {/* Form Validation Errors */}
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-xs font-bold flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Submit Trigger */}
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-primary hover:bg-emerald-800 text-primary-foreground rounded-lg text-xs font-bold transition-all shadow-xs"
-              >
-                تحقق ودخول للمنصة
-              </button>
-
-              {/* Security info disclaimer */}
-              <div className="border-t border-border pt-3 mt-4 text-[10px] text-muted-foreground text-center font-medium leading-relaxed">
-                هذه البوابة تخضع لنظام الحماية والأمن المتطور المعتمد بالمجلس الأعلى للركابية. لن يتم مشاركة بيانات هويتك الشخصية لأي جهة خارجية.
-              </div>
-            </form>
-          )}
+          <h1 className="text-xl font-bold text-amber-400">بوابة الحساب الموحد</h1>
+          <p className="text-xs text-slate-400">منصة السادة الركابية الرقمية - جمهورية السودان</p>
         </div>
-      </main>
 
-      <Footer />
+        {/* Email Confirmation Stage 1 Notice */}
+        {showConfirmationNotice ? (
+          <div className="p-5 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-900 border border-emerald-400 mx-auto flex items-center justify-center text-amber-400">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-emerald-300">تم إنشاء حسابك بنجاح 🎉</h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                أرسلنا رسالة تأكيد إلى بريدك الإلكتروني (<span className="font-mono text-amber-400">{userRegisteredEmail}</span>). يرجى فتح البريد والضغط على رابط التفعيل، ثم العودة لتسجيل الدخول وإكمال ملف العضوية.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  alert(`تم إعادة إرسال رابط التفعيل إلى ${userRegisteredEmail}`);
+                }}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-xs border border-amber-500/30 transition-colors"
+              >
+                إعادة إرسال رسالة التأكيد 📩
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmationNotice(false);
+                  setActiveTab("login");
+                }}
+                className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-colors"
+              >
+                الانتقال لتسجيل الدخول ←
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+        <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-bold">
+          <button
+            onClick={() => { setActiveTab("login"); setErrorMsg(""); setSuccessMsg(""); }}
+            className={`flex-1 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+              activeTab === "login" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <LogIn className="w-4 h-4" />
+            تسجيل الدخول
+          </button>
+          <button
+            onClick={() => { setActiveTab("signup"); setErrorMsg(""); setSuccessMsg(""); }}
+            className={`flex-1 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+              activeTab === "signup" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            إنشاء حساب جديد
+          </button>
+        </div>
+
+        {/* Notifications */}
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Login Form */}
+        {activeTab === "login" ? (
+          <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">البريد الإلكتروني المسجل</label>
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="name@example.com"
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">كلمة المرور</label>
+              <input
+                name="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-colors text-xs"
+            >
+              {isPending ? "جاري التحقق..." : "تسجيل الدخول إلى حسابك"}
+            </button>
+          </form>
+        ) : (
+          /* Real Signup Form */
+          <form onSubmit={handleSignUpSubmit} className="space-y-3 text-xs">
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">الاسم رباعياً *</label>
+              <input
+                name="fullName"
+                type="text"
+                required
+                placeholder="أدخل اسمك رباعياً..."
+                className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">البريد الإلكتروني *</label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="email@domain.com"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">رقم الهاتف *</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  required
+                  placeholder="0912345678"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">الولاية</label>
+                <input
+                  name="state"
+                  type="text"
+                  placeholder="مثال: الخرطوم / نهر النيل"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-semibold">المحلية</label>
+                <input
+                  name="locality"
+                  type="text"
+                  placeholder="اسم المحلية..."
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 mb-1 font-semibold">كلمة المرور (6 أحرف على الأقل) *</label>
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                placeholder="••••••••"
+                className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors text-xs"
+            >
+              {isPending ? "جاري إنشاء الحساب..." : "إنشاء حساب ومستند عضوية جديد"}
+            </button>
+          </form>
+        )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

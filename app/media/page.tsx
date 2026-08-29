@@ -1,217 +1,100 @@
-"use client";
+import { getNewsAction, getMediaAction } from "@/lib/actions/cms";
+import { Newspaper, Image as ImageIcon, Play, FileText } from "lucide-react";
 
-import React, { useState } from "react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { useSiteStore } from "@/lib/state-store";
-import { Image as ImageIcon, Video, FileText, Search, ExternalLink, HelpCircle, Film } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-export default function Media() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<"all" | "news" | "photos" | "videos" | "docs">("all");
-
-  const { news, photos, videos } = useSiteStore();
-
-  const filteredNews = news.filter(newsItem =>
-    newsItem.title.includes(searchQuery) || newsItem.summary.includes(searchQuery)
-  );
-
-  const mockDocs = [
-    { title: "كتاب: منارة الهدى في نسب الركابية الكبرى", desc: "أكبر مؤلف تاريخي شامل يتناول تاريخ الفروع وتفرعاتها.", author: "الشيخ عبد المجيد الركابي" },
-    { title: "وثيقة تحقيق رحلة ملوك النوبة وترحيبهم", desc: "مخطوطة نادرة تم مراجعتها بمعرفة أمانة المعرفة والنسب.", author: "لجنة التحقيق العلمي" }
-  ];
+export default async function MediaPage() {
+  const news = await getNewsAction();
+  const media = await getMediaAction();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
-
-      <section className="relative py-12 bg-emerald-950 text-white text-right px-4 overflow-hidden border-b border-amber-500/20">
-        <div className="absolute inset-0 bg-[radial-gradient(#e0a96d_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.04]" />
-        <div className="max-w-4xl mx-auto space-y-3 relative z-10">
-          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            أخبار، أرشيف صور، ومخطوطات تاريخية
-          </span>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">المعرض الإعلامي والمكتبة</h1>
-          <p className="text-xs md:text-sm text-emerald-100/85 leading-relaxed font-semibold max-w-2xl">
-            تصفح الأخبار الرسمية الموثقة، معرض الصور، الفيديوهات التوثيقية، وتحميل الكتب والمخطوطات العائلية المصورة بدقة.
-          </p>
+    <div className="min-h-screen bg-slate-950 text-white dir-rtl py-12 px-4 sm:px-6 lg:px-8 space-y-12">
+      <div className="max-w-5xl mx-auto text-center space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+          <Newspaper className="w-4 h-4" />
+          المركز الإعلامي والمحتوى الرقمي
         </div>
-      </section>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-100">
+          الأخبار والبيانات الرسمية ومعرض الميديا
+        </h1>
+        <p className="text-slate-300 text-sm max-w-3xl mx-auto">
+          المصدر الرسمي للبيانات والأخبار والوثائق المرئية الصادرة عن الأمانة العامة.
+        </p>
+      </div>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-12 space-y-12 text-right">
+      {/* News Section */}
+      <div className="max-w-6xl mx-auto space-y-6">
+        <h2 className="text-lg font-bold text-amber-400 border-r-4 border-amber-500 pr-3">
+          أحدث الأخبار والبيانات الرسمية
+        </h2>
 
-        {/* Search bar and filters */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card border border-border p-4 rounded-xl">
-          <div className="relative w-full md:max-w-xs">
-            <Search className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="ابحث في الأخبار والبيانات..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-9 pl-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:ring-1 focus:ring-primary outline-hidden"
-            />
+        {news.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-slate-900 border border-dashed border-slate-800 text-center text-slate-400 text-xs space-y-2">
+            <FileText className="w-8 h-8 text-amber-500/40 mx-auto" />
+            <p className="font-bold text-slate-300">لا توجد أخبار أو بيانات رسمية منشورة حالياً.</p>
+            <p className="text-[11px] text-slate-500">سيتم النشر فور اعتماد البيانات من الدائرة الإعلامية.</p>
           </div>
-
-          {/* Gallery navigation menu tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-            <button
-              onClick={() => setActiveCategory("all")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-                activeCategory === "all" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              استعراض الكل
-            </button>
-            <button
-              onClick={() => setActiveCategory("news")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-                activeCategory === "news" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              الأخبار الرسمية والبيانات
-            </button>
-            <button
-              onClick={() => setActiveCategory("photos")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-                activeCategory === "photos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              معرض الصور والآثار
-            </button>
-            <button
-              onClick={() => setActiveCategory("videos")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-                activeCategory === "videos" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              الفيديوهات والوثائقيات
-            </button>
-            <button
-              onClick={() => setActiveCategory("docs")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold shrink-0 transition-all ${
-                activeCategory === "docs" ? "bg-primary text-primary-foreground shadow-xs" : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              المكتبة والمخطوطات
-            </button>
-          </div>
-        </div>
-
-        {/* 1. Official News section */}
-        {(activeCategory === "all" || activeCategory === "news") && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">التقارير الإخبارية الأخيرة</h2>
-            {filteredNews.length === 0 ? (
-              <p className="text-xs text-muted-foreground font-semibold">لا توجد نتائج تطابق بحثك.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredNews.map((newsItem) => (
-                  <div key={newsItem.id} className="bg-card border border-border p-5 rounded-2xl shadow-xs space-y-3 hover:border-primary/50 transition-colors">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-primary">
-                      {newsItem.category}
-                    </span>
-                    <h3 className="font-extrabold text-base text-foreground">{newsItem.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{newsItem.summary}</p>
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed font-medium pt-2 border-t border-border">
-                      {newsItem.content}
-                    </p>
-                    <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-                      <span>تاريخ النشر: {newsItem.date}</span>
-                      <span className="font-bold text-primary">معتمد رسمي</span>
-                    </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {news.map((n: any) => (
+              <div key={n.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 overflow-hidden">
+                {n.featured_image && (
+                  <div className="w-full h-48 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                    <img src={n.featured_image} alt={n.title} className="w-full h-full object-cover" />
                   </div>
-                ))}
+                )}
+                <div>
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-semibold">
+                    {n.category || "خبر رسمى"}
+                  </span>
+                  <h3 className="font-bold text-slate-100 text-base mt-2">{n.title}</h3>
+                  <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed mt-1">{n.excerpt || n.content}</p>
+                  <p className="text-[10px] text-slate-500 mt-2">{new Date(n.created_at).toLocaleDateString("ar-SD")}</p>
+                </div>
               </div>
-            )}
+            ))}
           </div>
         )}
+      </div>
 
-        {/* 2. Photo Gallery Grid */}
-        {(activeCategory === "all" || activeCategory === "photos") && (
-          <div className="space-y-6 pt-6">
-            <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">أرشيف الصور ومعرض الآثار</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {photos.map((photo) => (
-                <div key={photo.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow">
-                  {/* Photo Placeholder vector layout */}
-                  <div className="aspect-video bg-emerald-950/20 flex flex-col items-center justify-center p-4 border-b border-border text-center relative">
-                    {photo.image ? (
-                      <img src={photo.image} alt={photo.title} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon className="w-10 h-10 text-primary mb-2 opacity-60" />
-                    )}
-                    <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded relative z-10">{photo.tag}</span>
+      {/* Media Gallery Section */}
+      <div className="max-w-6xl mx-auto space-y-6 pt-6 border-t border-slate-800">
+        <h2 className="text-lg font-bold text-amber-400 border-r-4 border-amber-500 pr-3">
+          معرض الوسائط الرقمي (صور وفيديوهات)
+        </h2>
+
+        {media.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-slate-900 border border-dashed border-slate-800 text-center text-slate-400 text-xs space-y-2">
+            <ImageIcon className="w-8 h-8 text-amber-500/40 mx-auto" />
+            <p className="font-bold text-slate-300">لا توجد وسائط مضافة حالياً في المعرض الرقمي.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {media.map((m: any) => (
+              <div key={m.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 overflow-hidden">
+                {m.url && m.media_type === "photo" ? (
+                  <div className="w-full h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                    <img src={m.url} alt={m.title} className="w-full h-full object-cover" />
                   </div>
-                  <div className="p-4 space-y-1">
-                    <h4 className="font-extrabold text-sm text-foreground">{photo.title}</h4>
-                    <p className="text-xs text-muted-foreground font-semibold">{photo.desc}</p>
+                ) : m.url ? (
+                  <div className="w-full h-40 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center relative">
+                    <a href={m.url} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:scale-110 transition-transform">
+                      <Play className="w-6 h-6 fill-rose-400" />
+                    </a>
                   </div>
+                ) : null}
+                <div>
+                  <div className="font-bold text-slate-100 text-xs flex items-center gap-1.5">
+                    {m.media_type === "photo" ? <ImageIcon className="w-4 h-4 text-emerald-400" /> : <Play className="w-4 h-4 text-rose-400" />}
+                    <span>{m.title}</span>
+                  </div>
+                  {m.description && <p className="text-[11px] text-slate-400 mt-1">{m.description}</p>}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* 3. Video streaming sections */}
-        {(activeCategory === "all" || activeCategory === "videos") && (
-          <div className="space-y-6 pt-6">
-            <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">الفيديوهات والوثائقيات</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {videos.map((vid) => (
-                <div key={vid.id} className="bg-card border border-border p-5 rounded-2xl shadow-xs text-right space-y-3 hover:border-primary/50 transition-colors">
-                  <div className="flex items-center gap-2 text-primary font-bold">
-                    <Film className="w-5 h-5 text-amber-500 shrink-0" />
-                    <h4 className="text-sm font-extrabold text-foreground">{vid.title}</h4>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{vid.desc}</p>
-                  <a
-                    href={vid.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline pt-2"
-                  >
-                    <span>مشاهدة البث المرئي ({vid.url})</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 4. Library and Documents books list */}
-        {(activeCategory === "all" || activeCategory === "docs") && (
-          <div className="space-y-6 pt-6">
-            <h2 className="text-xl font-extrabold text-foreground border-r-4 border-primary pr-2.5">المكتبة وتحميل المخطوطات</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockDocs.map((doc, idx) => (
-                <div key={idx} className="bg-card border border-border p-5 rounded-2xl shadow-xs text-right space-y-4 hover:border-primary/50 transition-colors flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-amber-500 shrink-0" />
-                      <h4 className="text-sm font-extrabold text-foreground">{doc.title}</h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{doc.desc}</p>
-                  </div>
-                  <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-                    <span>إعداد وتحقيق: {doc.author}</span>
-                    <button
-                      onClick={() => alert("سيتم بدء تحميل المخطوطة كملف PDF عالي الدقة قريباً.")}
-                      className="text-primary hover:underline font-extrabold text-[10px]"
-                    >
-                      تحميل النسخة PDF
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      <Footer />
+      </div>
     </div>
   );
 }

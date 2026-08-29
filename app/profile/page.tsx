@@ -1,200 +1,313 @@
-"use client";
+import { getCurrentUserAction } from "@/lib/actions/auth";
+import { getMemberCardAndReceiptsHistoryAction } from "@/lib/actions/physical-cards";
+import { getMonthlyMembershipGoalAction, getMembershipPlansAction } from "@/lib/actions/membership";
+import { getPaymentMethodsAction } from "@/lib/actions/payments";
+import { UserCheck, Shield, Award, Sparkles, CreditCard, HeartHandshake, FileText, CheckCircle2, Clock, AlertCircle, Calendar, Receipt } from "lucide-react";
+import Link from "next/link";
+import PhysicalCardRequestModal from "@/components/physical-card-modal";
+import ProfileMembershipActions from "@/components/profile-membership-actions";
 
-import React, { useRef, useState } from "react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { peopleDatabase } from "@/lib/mock-data";
-import { Printer, Download, Eye, QrCode, BadgeCheck, Phone, Mail, MapPin, Award, Calendar } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-export default function Profile() {
-  const profileUser = peopleDatabase.find(p => p.id === "101") || peopleDatabase[4]; // Default to Prof. Al-Tayeb
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [printStatus, setPrintStatus] = useState("");
+export default async function ProfilePage() {
+  const userAccount = await getCurrentUserAction();
 
-  const handlePrint = () => {
-    window.print();
-  };
+  if (!userAccount || !userAccount.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 dir-rtl">
+        <div className="max-w-md w-full bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+          <Shield className="w-12 h-12 text-amber-400 mx-auto" />
+          <h1 className="text-lg font-bold text-slate-100">الملف الشخصي والبطاقة الرقمية</h1>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            عذراً، يلزم تسجيل الدخول لعرض معلومات الحساب وبطاقة العضوية الرقمية.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors"
+          >
+            الانتقال لتسجيل الدخول
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const profile = userAccount.profile || {};
+  const member = userAccount.member || {};
+  const { cardRequests, receipts, subscriptions } = await getMemberCardAndReceiptsHistoryAction();
+  const goal = await getMonthlyMembershipGoalAction();
+  const plans = await getMembershipPlansAction();
+  const bankMethods = await getPaymentMethodsAction();
+
+  const currentPlan = plans.find((p: any) => p.id === member.plan_id) || plans.find((p: any) => p.code === "basic") || plans[0];
+  const completionPct = profile.profile_completion_pct || 40;
+
+  const hasPendingPayment = receipts.some((r: any) => r.payment_type === "membership" && r.status === "pending_review");
+  const hasActiveSubscription = subscriptions.some((s: any) => s.status === "active") || receipts.some((r: any) => r.payment_type === "membership" && r.status === "approved");
+
+  // Calculate total user contributions
+  const totalApprovedContributions = receipts
+    .filter((r: any) => r.status === "approved")
+    .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
+    <div className="min-h-screen bg-slate-950 text-white dir-rtl py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6">
 
-      <section className="relative py-12 bg-emerald-950 text-white text-right px-4 overflow-hidden border-b border-amber-500/20">
-        <div className="absolute inset-0 bg-[radial-gradient(#e0a96d_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.04]" />
-        <div className="max-w-4xl mx-auto space-y-3 relative z-10">
-          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            البطاقة الرقمية الرسمية والاشتراك
-          </span>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">الملف الشخصي الرقمي الموحد</h1>
-          <p className="text-xs md:text-sm text-emerald-100/85 leading-relaxed font-semibold max-w-2xl">
-            استعرض بطاقة هويتك الرقمية الخاصة بالسادة الركابية، صالحة للطباعة والتثبت السريع عبر مسح رمز الاستجابة السريعة QR المدمج.
-          </p>
-        </div>
-      </section>
-
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-12 grid grid-cols-1 lg:grid-cols-12 gap-8 text-right">
-
-        {/* Right Pane: Profile Metadata list (cols-span-7) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-card border border-border p-6 rounded-2xl shadow-xs space-y-6">
-            <div className="flex items-center gap-3 border-b border-border pb-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950 text-primary flex items-center justify-center font-extrabold text-lg shadow-sm">
-                ر
+        {/* User Profile Summary Card */}
+        <div className="p-6 rounded-2xl bg-slate-900 border border-emerald-500/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-extrabold text-2xl">
+                {profile.full_name?.charAt(0) || userAccount.user.email?.charAt(0)}
               </div>
               <div>
-                <h3 className="font-extrabold text-base text-foreground flex items-center gap-1.5">
-                  <span>{profileUser.name}</span>
-                  <BadgeCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                </h3>
-                <p className="text-xs text-muted-foreground font-semibold">{profileUser.title || "عضو نشط بالديوان"}</p>
-              </div>
-            </div>
-
-            {/* Profile Fields list */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-muted-foreground">
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">الرقم الوطني الموثق</span>
-                <span className="text-foreground text-xs" dir="ltr">{profileUser.nationalId || "1010000000"}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">البريد الإلكتروني المعتمد</span>
-                <span className="text-foreground text-xs">{profileUser.email || "support@alrikabiyyah.org"}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">رقم الهاتف</span>
-                <span className="text-foreground text-xs" dir="ltr">{profileUser.phone || "+249 9123 45678"}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">الفرع العائلي المسجل</span>
-                <span className="text-foreground text-xs">{profileUser.branch} - آل {profileUser.family}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">الولاية والمحلية والقرية</span>
-                <span className="text-foreground text-xs">{profileUser.state} • {profileUser.locality} • {profileUser.village}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground block font-medium">تاريخ الانضمام والاعتماد</span>
-                <span className="text-foreground text-xs flex items-center gap-1 justify-start">
-                  <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>{profileUser.joinDate || "2024-01-15"}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Achievements and history */}
-            {profileUser.achievements && profileUser.achievements.length > 0 && (
-              <div className="pt-4 border-t border-border space-y-2">
-                <h4 className="text-xs font-bold text-foreground">الإنجازات والجوائز المعتمدة:</h4>
-                <ul className="space-y-1.5">
-                  {profileUser.achievements.map((ach, idx) => (
-                    <li key={idx} className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
-                      <Award className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>{ach}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Left Pane: Digital Premium ID Card Preview (cols-span-5) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="text-center space-y-2">
-            <h3 className="font-extrabold text-sm text-foreground">معاينة بطاقة الهوية الرقمية</h3>
-            <p className="text-xs text-muted-foreground font-semibold">تأكد من دقة المعلومات قبل حفظ أو طباعة البطاقة.</p>
-          </div>
-
-          {/* Premium Vector Style ID Card */}
-          <div
-            ref={cardRef}
-            className="relative overflow-hidden w-full max-w-sm mx-auto aspect-[1.58/1] rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white p-5 shadow-2xl flex flex-col justify-between"
-          >
-            {/* Elegant Background Patterns */}
-            <div className="absolute inset-0 bg-[radial-gradient(#e0a96d_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.05]" />
-            <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-amber-400/5 blur-2xl" />
-
-            {/* Card Header Stamp */}
-            <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5 relative z-10">
-              <div className="flex items-center gap-1.5">
-                <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-400 flex items-center justify-center text-amber-400 font-extrabold text-sm shadow-inner">
-                  ر
-                </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-[10px] font-bold text-white leading-tight">السادة الركابية</span>
-                  <span className="text-[7px] font-medium text-amber-400 leading-none">المنصة الرقمية الموحدة</span>
-                </div>
-              </div>
-              <span className="text-[8px] bg-emerald-900 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-extrabold tracking-widest">
-                بطاقة عضوية
-              </span>
-            </div>
-
-            {/* Card Body details */}
-            <div className="grid grid-cols-12 gap-2 my-auto relative z-10 text-right items-center">
-              {/* Profile Main details (col-span-8) */}
-              <div className="col-span-8 space-y-1.5">
-                <h4 className="text-xs font-extrabold text-white leading-normal truncate">{profileUser.name}</h4>
-                <p className="text-[8px] text-amber-300 font-bold leading-none">{profileUser.title || "عضو معتمد"}</p>
-
-                <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-amber-500/10 text-[7px] text-emerald-200/90 font-semibold">
-                  <div>
-                    <span className="text-amber-400/60 block text-[6px] font-medium leading-none">العائلة والفرع</span>
-                    <span>آل {profileUser.family} • {profileUser.branch}</span>
-                  </div>
-                  <div>
-                    <span className="text-amber-400/60 block text-[6px] font-medium leading-none">الولاية والمحلية</span>
-                    <span>{profileUser.state} • {profileUser.locality}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* QR Code and Avatar (col-span-4) */}
-              <div className="col-span-4 flex flex-col items-center justify-center space-y-1">
-                <div className="w-14 h-14 bg-white p-1 rounded-lg shadow-md flex items-center justify-center">
-                  <QrCode className="w-12 h-12 text-black" />
-                </div>
-                {profileUser.membershipId && (
-                  <span className="text-[7px] text-amber-400 font-extrabold" dir="ltr">
-                    {profileUser.membershipId}
+                <h1 className="text-xl font-bold text-slate-100">{profile.full_name || "عضو مسجل"}</h1>
+                <p className="text-xs text-slate-400 mt-0.5">{userAccount.user.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
+                    {userAccount.roles?.length ? userAccount.roles.join(", ") : "عضو مسجل"}
                   </span>
-                )}
+                </div>
               </div>
             </div>
 
-            {/* Card Footer stamp */}
-            <div className="border-t border-amber-500/15 pt-2 flex items-center justify-between text-[7px] text-emerald-200/80 font-bold relative z-10">
-              <span>تاريخ الاعتماد: {profileUser.joinDate || "2024-01-15"}</span>
-              <span className="text-amber-400 flex items-center gap-0.5">
-                <BadgeCheck className="w-3 h-3 text-amber-400" /> موثق رقميّاً
-              </span>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-colors"
+              >
+                تصفح المنصة الشاملة 🌐
+              </Link>
+              <Link
+                href="/profile/complete"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold transition-colors"
+              >
+                تعديل واستكمال الملف ({completionPct}%) ←
+              </Link>
             </div>
           </div>
 
-          {/* Quick Print actions */}
-          <div className="flex items-center gap-3 justify-center">
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 border border-border bg-card hover:bg-muted text-foreground rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-xs"
-            >
-              <Printer className="w-4 h-4 text-amber-500" />
-              <span>طباعة بطاقة الهوية</span>
-            </button>
-            <button
-              onClick={() => {
-                alert("تم إرسال بطاقة الهوية الرقمية بصيغة PDF لبريدكم الإلكتروني المسجل بنجاح.");
-              }}
-              className="px-4 py-2 bg-primary hover:bg-emerald-800 text-primary-foreground rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-xs"
-            >
-              <Download className="w-4 h-4 text-amber-300" />
-              <span>حفظ كملف PDF</span>
-            </button>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="space-y-1">
+              <span className="text-slate-400 text-[11px] block">رقم الهاتف</span>
+              <p className="font-semibold text-slate-200">{profile.phone || "غير محدد"}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-slate-400 text-[11px] block">بلد الإقامة</span>
+              <p className="font-semibold text-slate-200">{profile.country_residence || "السودان"}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-slate-400 text-[11px] block">المهنة</span>
+              <p className="font-semibold text-slate-200">{profile.profession || "غير محدد"}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-slate-400 text-[11px] block">أعضاء الأسرة</span>
+              <p className="font-semibold text-slate-200">{profile.family_members_count || 1} أفراد</p>
+            </div>
           </div>
         </div>
 
-      </main>
+        {/* Impact & Contributions Section */}
+        <div className="p-6 rounded-2xl bg-slate-900 border border-amber-500/30 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-amber-400 flex items-center gap-2">
+              <HeartHandshake className="w-5 h-5 text-amber-400" /> أثر مساهمتك في مجتمع السادة الركابية
+            </h2>
+            <span className="text-xs font-mono font-bold text-emerald-400">
+              إجمالي المساهمات المعتمدة: {totalApprovedContributions.toLocaleString()} SDG
+            </span>
+          </div>
 
-      <Footer />
+          <p className="text-xs text-slate-300 leading-relaxed">
+            تساهم مشاركاتك العضوية الشهرية بشكل مباشر في تمويل مبادرات صندوق التكافل والخدمات الاجتماعية والتعليمية والصحية لخدمة أبناء المجتمع السوداني.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-center text-xs">
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="text-slate-400 text-[11px]">حالة الاشتراك الشهري</div>
+              <div className="font-bold text-emerald-400 mt-1">{hasActiveSubscription ? "اشتراك شهري مدفوع ومفعل" : hasPendingPayment ? "تم إرسال الدفعية وفي انتظار اعتماد الأدمن" : "المستوى الأساسي (غير إلزامي الدفع)"}</div>
+            </div>
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="text-slate-400 text-[11px]">عدد العمليات المسجلة</div>
+              <div className="font-bold text-amber-400 mt-1">{receipts.length} معاملات</div>
+            </div>
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="text-slate-400 text-[11px]">هدف العضوية الشهرية</div>
+              <div className="font-bold text-blue-400 mt-1">{goal.currentMembersCount} / {goal.targetMembersCount} عضو</div>
+            </div>
+          </div>
+
+          <ProfileMembershipActions
+            currentPlan={currentPlan}
+            bankMethods={bankMethods}
+            hasPendingPayment={hasPendingPayment}
+            hasActiveSubscription={hasActiveSubscription}
+          />
+        </div>
+
+        {/* Digital Card & Physical Request */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {member.membership_number ? (
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 border border-amber-500/40 space-y-4">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
+                <span className="text-xs font-bold text-amber-400">بطاقة العضوية الرقمية المعتمدة</span>
+                <Award className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs text-slate-400">رقم العضوية الرسمية</div>
+                <div className="text-2xl font-mono font-extrabold text-emerald-400">{member.membership_number}</div>
+              </div>
+              <div className="pt-2 text-left">
+                <Link
+                  href={`/verify/${member.membership_number}`}
+                  className="text-xs font-bold text-amber-400 hover:underline inline-flex items-center gap-1"
+                >
+                  معاينة صفحة التحقق العام ←
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3 flex flex-col justify-center">
+              <p className="text-xs text-slate-400">لم يتم إصدار بطاقة عضوية رسمية لهذا الحساب بعد.</p>
+              <div>
+                <Link href="/membership/select" className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs inline-block">
+                  اختيار مستوى العضوية والدفع
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Physical Card Request Section */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h3 className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4" /> طلب بطاقة عضوية مادية (اختياري)
+                </h3>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                يمكنك طلب بطاقة مادية محمولة تحمل بياناتك وصورتك الشخصية مقابل رسوم استخراج قدرها <span className="text-amber-400 font-bold font-mono">50,000 SDG</span>.
+              </p>
+            </div>
+
+            <div>
+              {member.status === "active" ? (
+                <PhysicalCardRequestModal />
+              ) : (
+                <div className="p-2.5 bg-slate-950 rounded-xl text-[11px] text-slate-500 text-center border border-slate-800">
+                  يتطلب طلب البطاقة المادية تفعيل العضوية أولاً.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Member Subscription Timeline */}
+        {subscriptions.length > 0 && (
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-emerald-400" /> سجل الاشتراكات والفترات الزمنية النشطة
+            </h3>
+            <div className="space-y-3">
+              {subscriptions.map((sub: any) => (
+                <div key={sub.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-100">{sub.membership_plans?.name_ar || "عضوية شهرية"}</span>
+                    <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                      الفترة: {sub.start_date} ← {sub.end_date}
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                    {sub.status === "active" ? "نشط ومفعل" : sub.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Member Payment & Receipts History Table */}
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <Receipt className="w-4 h-4 text-amber-400" /> سجل المعاملات المالية والإيصالات المرفوعة ({receipts.length})
+            </h3>
+          </div>
+
+          {receipts.length === 0 ? (
+            <div className="p-6 rounded-xl bg-slate-950 border border-dashed border-slate-800 text-center text-xs text-slate-500">
+              لم تسجل أي معاملات مالية بعد.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">التاريخ</th>
+                    <th className="p-3">نوع المعاملة</th>
+                    <th className="p-3">المبلغ (SDG)</th>
+                    <th className="p-3">مرجع التحويل</th>
+                    <th className="p-3">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {receipts.map((r: any) => (
+                    <tr key={r.id} className="hover:bg-slate-800/40">
+                      <td className="p-3 font-mono text-slate-400">
+                        {new Date(r.created_at).toLocaleDateString("ar-SD")}
+                      </td>
+                      <td className="p-3 font-medium">
+                        {r.payment_type === "membership" ? "اشتراك عضوية" : r.payment_type === "physical_card_fee" ? "رسوم بطاقة مادية" : "تبرع مساهمة"}
+                      </td>
+                      <td className="p-3 font-mono font-bold text-amber-400">
+                        {Number(r.amount).toLocaleString()}
+                      </td>
+                      <td className="p-3 font-mono text-slate-300">{r.transaction_reference}</td>
+                      <td className="p-3">
+                        {r.status === "approved" ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            معتمد
+                          </span>
+                        ) : r.status === "rejected" ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            مرفوض
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            قيد المراجعة
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Existing Physical Card Requests Tracker */}
+        {cardRequests.length > 0 && (
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <h3 className="text-xs font-bold text-slate-200">سجل طلبات البطاقات المادية</h3>
+            <div className="space-y-3">
+              {cardRequests.map((req: any) => (
+                <div key={req.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-mono text-amber-400 font-bold">{req.request_number}</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{new Date(req.created_at).toLocaleDateString("ar-SD")}</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    {req.status === "pending_review" ? "🟡 قيد المراجعة" : req.status === "in_printing" ? "🔵 قيد الطباعة" : req.status === "ready_for_pickup" ? "🟢 جاهزة للتسليم" : req.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

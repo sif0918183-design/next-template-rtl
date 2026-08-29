@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Menu, X, Bell, User, LayoutDashboard, Compass, Users2, Database, ShieldAlert, Shield, FileText, Settings, Heart, Image as ImageIcon } from "lucide-react";
+import { Search, Menu, X, Bell, User, Settings } from "lucide-react";
 import { GlobalSearch } from "./global-search";
 
 export function Navbar() {
@@ -12,6 +12,7 @@ export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
+  // Public Menu Items (Admin link strictly removed)
   const menuItems = [
     { name: "الرئيسية", href: "/" },
     { name: "عن الركابية", href: "/about" },
@@ -22,7 +23,6 @@ export function Navbar() {
     { name: "الخدمات الاجتماعية", href: "/services" },
     { name: "المعرفة والإعلام", href: "/media" },
     { name: "تاريخ السادة", href: "/history" },
-    { name: "لوحة التحكم", href: "/admin" },
     { name: "اتصل بنا", href: "/contact" },
   ];
 
@@ -55,7 +55,7 @@ export function Navbar() {
               </Link>
             </div>
 
-            {/* Center: Desktop Navigation Links (Responsive layout for wide screen) */}
+            {/* Center: Desktop Navigation Links */}
             <div className="hidden xl:flex items-center gap-1.5">
               {menuItems.map((item) => {
                 const isActive = pathname === item.href;
@@ -120,15 +120,6 @@ export function Navbar() {
                 )}
               </div>
 
-              {/* Admin Shortcut */}
-              <Link
-                href="/admin"
-                className="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-muted transition-colors hidden sm:inline-flex"
-                title="لوحة الإدارة والتحكم"
-              >
-                <Shield className="w-5 h-5" />
-              </Link>
-
               {/* Profile Shortcut */}
               <Link
                 href="/profile"
@@ -147,12 +138,13 @@ export function Navbar() {
                 <Settings className="w-5 h-5" />
               </Link>
 
-              {/* Login Button */}
+              {/* Member Dashboard / Login Button */}
               <Link
-                href="/login"
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-secondary text-secondary-foreground hover:bg-accent hover:text-foreground transition-all duration-200 border border-amber-500/20 shadow-xs"
+                href="/profile"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:from-amber-400 hover:to-amber-500 transition-all duration-200 shadow-sm flex items-center gap-1.5"
               >
-                بوابة الدخول
+                <User className="w-4 h-4 shrink-0" />
+                <span>لوحة العضوية</span>
               </Link>
 
               {/* Mobile Menu Trigger */}
@@ -190,10 +182,6 @@ export function Navbar() {
                 );
               })}
               <div className="border-t border-border pt-3 mt-3 flex items-center justify-around">
-                <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center gap-1 text-xs text-amber-600 hover:text-foreground">
-                  <Shield className="w-5 h-5" />
-                  <span>الإدارة</span>
-                </Link>
                 <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                   <User className="w-5 h-5 text-primary" />
                   <span>الملف</span>
