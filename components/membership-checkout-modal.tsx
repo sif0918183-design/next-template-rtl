@@ -8,10 +8,10 @@ import { CreditCard, CheckCircle2, AlertCircle, X, Upload, ShieldCheck } from "l
 interface MembershipCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  plan: {
-    id: string;
-    name_ar: string;
-    price_sdg: number;
+  plan?: {
+    id?: string;
+    name_ar?: string;
+    price_sdg?: number;
   };
   bankMethods: Array<{
     id: string;
@@ -32,6 +32,7 @@ export default function MembershipCheckoutModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [customAmount, setCustomAmount] = useState<number>(plan?.price_sdg || 10000);
 
   if (!isOpen) return null;
 
@@ -42,18 +43,18 @@ export default function MembershipCheckoutModal({
 
     const formData = new FormData(e.currentTarget);
     formData.append("paymentType", "membership");
-    formData.append("amount", String(plan.price_sdg));
 
     startTransition(async () => {
       const res = await submitPaymentReceiptAction(formData);
       if (res.success) {
-        setSuccessMsg("تم رفع إشعار اشتراك العضوية بنجاح! جاري تحويلك إلى لوحة العضو...");
+        setSuccessMsg("تم إرسال الدفعية بنجاح وفي انتظار اعتماد الأدمن! جاري تحديث لوحة العضو...");
         setTimeout(() => {
           onClose();
           router.push("/profile");
-        }, 1200);
+          router.refresh();
+        }, 1500);
       } else {
-        setErrorMsg(res.error || "حدث خطأ أثناء رفع الإشعار.");
+        setErrorMsg(res.error || "حدث خطأ أثناء رفع إشعار الدفع.");
       }
     });
   };
@@ -70,10 +71,10 @@ export default function MembershipCheckoutModal({
 
         <div className="space-y-1 text-center sm:text-right">
           <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
-            تأكيد الدفع واشتراك العضوية
+            دفع الاشتراك الشهري
           </span>
           <h2 className="text-lg font-bold text-slate-100 mt-1">
-            دفع رسوم: <span className="text-emerald-400">{plan.name_ar}</span> ({Number(plan.price_sdg).toLocaleString()} SDG)
+            دفع اشتراك: <span className="text-emerald-400">{plan?.name_ar || "العضوية الرسمية"}</span>
           </h2>
         </div>
 
@@ -117,6 +118,21 @@ export default function MembershipCheckoutModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-slate-300 mb-1 font-semibold">
+              مبلغ الاشتراك المحول (SDG) *
+            </label>
+            <input
+              name="amount"
+              type="number"
+              min="1"
+              required
+              value={customAmount}
+              onChange={(e) => setCustomAmount(Number(e.target.value))}
+              className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-amber-400 font-mono font-bold text-sm focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
           <div>
             <label className="block text-slate-300 mb-1 font-semibold">
               صورة إشعار التحويل البنكي (JPG, PNG, WEBP) *

@@ -1,9 +1,11 @@
 import { getCurrentUserAction } from "@/lib/actions/auth";
 import { getMemberCardAndReceiptsHistoryAction } from "@/lib/actions/physical-cards";
-import { getMonthlyMembershipGoalAction } from "@/lib/actions/membership";
+import { getMonthlyMembershipGoalAction, getMembershipPlansAction } from "@/lib/actions/membership";
+import { getPaymentMethodsAction } from "@/lib/actions/payments";
 import { UserCheck, Shield, Award, Sparkles, CreditCard, HeartHandshake, FileText, CheckCircle2, Clock, AlertCircle, Calendar, Receipt } from "lucide-react";
 import Link from "next/link";
 import PhysicalCardRequestModal from "@/components/physical-card-modal";
+import ProfileMembershipActions from "@/components/profile-membership-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +36,14 @@ export default async function ProfilePage() {
   const member = userAccount.member || {};
   const { cardRequests, receipts, subscriptions } = await getMemberCardAndReceiptsHistoryAction();
   const goal = await getMonthlyMembershipGoalAction();
+  const plans = await getMembershipPlansAction();
+  const bankMethods = await getPaymentMethodsAction();
 
+  const currentPlan = plans.find((p: any) => p.id === member.plan_id) || plans.find((p: any) => p.code === "basic") || plans[0];
   const completionPct = profile.profile_completion_pct || 40;
+
+  const hasPendingPayment = receipts.some((r: any) => r.payment_type === "membership" && r.status === "pending_review");
+  const hasActiveSubscription = subscriptions.some((s: any) => s.status === "active") || receipts.some((r: any) => r.payment_type === "membership" && r.status === "approved");
 
   // Calculate total user contributions
   const totalApprovedContributions = receipts
@@ -118,7 +126,7 @@ export default async function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-center text-xs">
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
               <div className="text-slate-400 text-[11px]">حالة الاشتراك الشهري</div>
-              <div className="font-bold text-emerald-400 mt-1">{member.status === "active" ? "نشط ومفعل" : "قيد المراجعة"}</div>
+              <div className="font-bold text-emerald-400 mt-1">{hasActiveSubscription ? "اشتراك شهري مدفوع ومفعل" : hasPendingPayment ? "تم إرسال الدفعية وفي انتظار اعتماد الأدمن" : "المستوى الأساسي (غير إلزامي الدفع)"}</div>
             </div>
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
               <div className="text-slate-400 text-[11px]">عدد العمليات المسجلة</div>
@@ -129,6 +137,13 @@ export default async function ProfilePage() {
               <div className="font-bold text-blue-400 mt-1">{goal.currentMembersCount} / {goal.targetMembersCount} عضو</div>
             </div>
           </div>
+
+          <ProfileMembershipActions
+            currentPlan={currentPlan}
+            bankMethods={bankMethods}
+            hasPendingPayment={hasPendingPayment}
+            hasActiveSubscription={hasActiveSubscription}
+          />
         </div>
 
         {/* Digital Card & Physical Request */}

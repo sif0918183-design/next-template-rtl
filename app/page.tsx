@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { Award, Shield, Users, BookOpen, HeartHandshake, MapPin, Building2 } from "lucide-react";
+import { Award, Shield, Users, BookOpen, HeartHandshake, MapPin, Building2, UserCheck } from "lucide-react";
 import { getPublicSiteStatsAction } from "@/lib/actions/public-stats";
+import { getCurrentUserAction } from "@/lib/actions/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const publicStats = await getPublicSiteStatsAction();
+  const currentUser = await getCurrentUserAction();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white dir-rtl">
@@ -26,12 +28,22 @@ export default async function HomePage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <Link
-              href="/login"
-              className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-colors shadow-lg shadow-amber-500/20"
-            >
-              انضم إلى المنصة
-            </Link>
+            {currentUser?.user ? (
+              <Link
+                href="/profile"
+                className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-colors shadow-lg shadow-amber-500/20 flex items-center gap-2"
+              >
+                <UserCheck className="w-5 h-5" />
+                الدخول للوحة العضو
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-colors shadow-lg shadow-amber-500/20"
+              >
+                انضم إلى المنصة
+              </Link>
+            )}
             <Link
               href="/donate"
               className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors border border-emerald-500/40"

@@ -37,13 +37,20 @@ export default async function MediaPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {news.map((n: any) => (
-              <div key={n.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-semibold">
-                  {n.category || "خبر رسمى"}
-                </span>
-                <h3 className="font-bold text-slate-100 text-base">{n.title}</h3>
-                <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed">{n.excerpt || n.content}</p>
-                <p className="text-[10px] text-slate-500">{new Date(n.created_at).toLocaleDateString("ar-SD")}</p>
+              <div key={n.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 overflow-hidden">
+                {n.featured_image && (
+                  <div className="w-full h-48 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                    <img src={n.featured_image} alt={n.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div>
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-semibold">
+                    {n.category || "خبر رسمى"}
+                  </span>
+                  <h3 className="font-bold text-slate-100 text-base mt-2">{n.title}</h3>
+                  <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed mt-1">{n.excerpt || n.content}</p>
+                  <p className="text-[10px] text-slate-500 mt-2">{new Date(n.created_at).toLocaleDateString("ar-SD")}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -64,12 +71,25 @@ export default async function MediaPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {media.map((m: any) => (
-              <div key={m.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-                <div className="font-bold text-slate-100 text-xs flex items-center gap-1.5">
-                  {m.media_type === "photo" ? <ImageIcon className="w-4 h-4 text-emerald-400" /> : <Play className="w-4 h-4 text-rose-400" />}
-                  <span>{m.title}</span>
+              <div key={m.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 overflow-hidden">
+                {m.url && m.media_type === "photo" ? (
+                  <div className="w-full h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                    <img src={m.url} alt={m.title} className="w-full h-full object-cover" />
+                  </div>
+                ) : m.url ? (
+                  <div className="w-full h-40 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center relative">
+                    <a href={m.url} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:scale-110 transition-transform">
+                      <Play className="w-6 h-6 fill-rose-400" />
+                    </a>
+                  </div>
+                ) : null}
+                <div>
+                  <div className="font-bold text-slate-100 text-xs flex items-center gap-1.5">
+                    {m.media_type === "photo" ? <ImageIcon className="w-4 h-4 text-emerald-400" /> : <Play className="w-4 h-4 text-rose-400" />}
+                    <span>{m.title}</span>
+                  </div>
+                  {m.description && <p className="text-[11px] text-slate-400 mt-1">{m.description}</p>}
                 </div>
-                {m.description && <p className="text-[11px] text-slate-400">{m.description}</p>}
               </div>
             ))}
           </div>

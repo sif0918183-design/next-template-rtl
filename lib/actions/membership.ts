@@ -186,22 +186,35 @@ export async function selectUserMembershipPlanAction(planId: string): Promise<Ac
       return { success: false, error: "مستوى العضوية المحدد غير موجود." };
     }
 
-    // Update member record
-    const { data: member } = await supabaseAdmin
-      .from("members")
-      .select("id")
-      .eq("user_id", user.id)
+    // Fetch profile details to ensure full_name and phone are available for upsert
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, phone, state, locality")
+      .eq("id", user.id)
       .single();
 
-    if (member) {
-      await supabaseAdmin
-        .from("members")
-        .update({
+    const initialStatus = plan.price_sdg === 0 || !plan.is_payment_required ? "active" : "pending";
+
+    // Upsert member record so level selection never fails
+    const { error: upsertErr } = await supabaseAdmin
+      .from("members")
+      .upsert(
+        {
+          user_id: user.id,
+          full_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "عضو مسجل",
+          phone: profile?.phone || user.user_metadata?.phone || "غير محدد",
+          state: profile?.state || "الخرطوم",
+          locality: profile?.locality || "محلية الخرطوم",
           plan_id: planId,
-          status: plan.price_sdg === 0 || !plan.is_payment_required ? "active" : "pending",
+          status: initialStatus,
           updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (upsertErr) {
+      console.error("Select Plan Upsert Error:", upsertErr);
+      return { success: false, error: "حدث خطأ أثناء حفظ مستوى العضوية." };
     }
 
     revalidatePath("/profile");

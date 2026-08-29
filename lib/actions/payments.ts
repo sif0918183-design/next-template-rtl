@@ -241,40 +241,53 @@ export async function reviewPaymentReceiptAction(
         created_by: reviewerUserId,
       });
 
-      if (receipt.payment_type === "membership" && receipt.member_id) {
-        await supabaseAdmin
-          .from("members")
-          .update({ status: "active" })
-          .eq("id", receipt.member_id);
-
-        const { data: memberData } = await supabaseAdmin
-          .from("members")
-          .select("plan_id")
-          .eq("id", receipt.member_id)
-          .single();
-
-        let planIdToUse = memberData?.plan_id;
-        if (!planIdToUse) {
-          const { data: defaultPlan } = await supabaseAdmin
-            .from("membership_plans")
+      if (receipt.payment_type === "membership") {
+        // Resolve target member record
+        let targetMemberId = receipt.member_id;
+        if (!targetMemberId && receipt.user_id) {
+          const { data: mData } = await supabaseAdmin
+            .from("members")
             .select("id")
-            .eq("code", "basic")
+            .eq("user_id", receipt.user_id)
             .single();
-          planIdToUse = defaultPlan?.id;
+          targetMemberId = mData?.id;
         }
 
-        if (planIdToUse) {
-          const startDate = new Date();
-          const endDate = new Date();
-          endDate.setFullYear(endDate.getFullYear() + 1);
+        if (targetMemberId) {
+          await supabaseAdmin
+            .from("members")
+            .update({ status: "active" })
+            .eq("id", targetMemberId);
 
-          await supabaseAdmin.from("membership_subscriptions").insert({
-            member_id: receipt.member_id,
-            plan_id: planIdToUse,
-            start_date: startDate.toISOString().split("T")[0],
-            end_date: endDate.toISOString().split("T")[0],
-            status: "active",
-          });
+          const { data: memberData } = await supabaseAdmin
+            .from("members")
+            .select("plan_id")
+            .eq("id", targetMemberId)
+            .single();
+
+          let planIdToUse = memberData?.plan_id;
+          if (!planIdToUse) {
+            const { data: defaultPlan } = await supabaseAdmin
+              .from("membership_plans")
+              .select("id")
+              .eq("code", "basic")
+              .single();
+            planIdToUse = defaultPlan?.id;
+          }
+
+          if (planIdToUse) {
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setFullYear(endDate.getFullYear() + 1);
+
+            await supabaseAdmin.from("membership_subscriptions").insert({
+              member_id: targetMemberId,
+              plan_id: planIdToUse,
+              start_date: startDate.toISOString().split("T")[0],
+              end_date: endDate.toISOString().split("T")[0],
+              status: "active",
+            });
+          }
         }
       }
 
